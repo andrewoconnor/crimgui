@@ -1,0 +1,17 @@
+name: crimgui
+version: 0.1.0
+
+authors:
+  - Andrew O'Connor <andrewoconnor@outlook.com>
+
+description: |
+  CrImGui - Crystal bindings for ImGui
+
+dependencies:
+  crz:
+    github: dhruvrajvanshi/crz
+    version: ~> 1.0.0
+
+license: MIT
+
+crystal: 0.27.0

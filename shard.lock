@@ -1,0 +1,6 @@
+version: 1.0
+shards:
+  crz:
+    github: dhruvrajvanshi/crz
+    version: 1.0.0
+
