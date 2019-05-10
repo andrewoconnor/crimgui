@@ -408,71 +408,296 @@ lib ImGui
 
   # types
   struct CustomRect
+    id : LibC::UInt
+    width : LibC::UShort
+    height : LibC::UShort
+    x : LibC::UShort
+    y : LibC::UShort
+    glyph_advance_x : LibC::Float
+    glyph_offset : Vector2
+    font : ImFont*
   end
 
   struct ImColor
+    value : Vector4
   end
 
   struct ImDrawChannel
+    cmd_buffer : ImVector
+    idx_buffer : ImVector
   end
 
   struct ImDrawCmd
+    elem_count : LibC::UInt
+    clip_rect : Vector4
+    texture_id : Void*
+    user_callback : Void*
+    user_callback_data : Void*
   end
 
   struct ImDrawData
+    valid : Bool
+    cmd_lists : ImDrawList**
+    cmd_lists_count : LibC::Int
+    total_idx_count : LibC::Int
+    total_vtx_count : LibC::Int
+    display_pos : Vector2
+    display_size : Vector2
   end
 
   struct ImDrawList
+    cmd_buffer : ImVector
+    idx_buffer : ImVector
+    vtx_buffer : ImVector
+    flags : ImDrawListFlags
+    _data : Void**
+    _owner_name : LibC::Char*
+    _vtx_current_idx : LibC::UInt
+    _vtx_write_ptr : ImDrawVert*
+    _idx_write_ptr : LibC::UShort*
+    _clip_rect_stack : ImVector
+    _texture_id_stack : ImVector
+    _path : ImVector
+    _channels_current : LibC::Int
+    _channels_count : LibC::Int
+    _channels : ImVector
   end
 
   struct ImDrawVert
+    pos : Vector2
+    uv : Vector2
+    col : LibC::UInt
   end
 
   struct ImFont
+    font_size : LibC::Float
+    scale : LibC::Float
+    display_offset : Vector2
+    glyphs : ImVector
+    index_advance_x : ImVector
+    index_lookup : ImVector
+    fallback_glyph : ImFontGlyph*
+    fallback_advance_x : LibC::Float
+    fallback_char : LibC::UShort
+    config_data_count : LibC::Short
+    config_data : ImFontConfig*
+    container_atlas : ImFontAtlas*
+    ascent : LibC::Float
+    descent : LibC::Float
+    dirty_lookup_tables : Bool
+    metrics_total_surface : LibC::Int
   end
 
   struct ImFontAtlas
+    locked : Bool
+    flags : ImFontAtlasFlags
+    tex_id : Void*
+    tex_desired_width : LibC::Int
+    tex_glyph_padding : LibC::Int
+    tex_pixels_alpha8 : LibC::UChar*
+    tex_pixels_rgba32 : LibC::UInt*
+    tex_width : LibC::Int
+    tex_height : LibC::Int
+    tex_uv_scale : Vector2
+    tex_uv_white_pixel : Vector2
+    fonts : ImVector
+    custom_rects : ImVector
+    config_data : ImVector
   end
 
   struct ImFontConfig
+    font_data : Void*
+    font_data_size : LibC::Int
+    font_data_owned_by_atlas : Bool
+    font_no : LibC::Int
+    size_pixels : LibC::Float
+    oversample_h : LibC::Int
+    oversample_v : LibC::Int
+    pixel_snap_h : Bool
+    glyph_extra_spacing : Vector2
+    glyph_offset : Vector2
+    glyph_ranges : LibC::UShort*
+    glyph_min_advance_x : LibC::Float
+    glyph_max_advance_x : LibC::Float
+    merge_mode : Bool
+    rasterizer_flags : LibC::UInt
+    rasterizer_multiply : LibC::Float
+    dst_font : ImFont*
   end
 
   struct ImFontGlyph
+    codepoint : LibC::UShort
+    advance_x : LibC::Float
+    x0 : LibC::Float
+    y0 : LibC::Float
+    x1 : LibC::Float
+    y1 : LibC::Float
+    u0 : LibC::Float
+    v0 : LibC::Float
+    u1 : LibC::Float
+    v1 : LibC::Float
   end
 
   struct ImFontGlyphRangesBuilder
+    used_chars : ImVector
   end
 
   struct ImGuiIO
+    config_flags : ImGuiConfigFlags
+    backend_flags : ImGuiBackendFlags
+    display_size : Vector2
+    delta_time : LibC::Float
+    ini_saving_rate : LibC::Float
+    ini_filename : LibC::Char*
+    log_filename : LibC::Char*
+    mouse_double_click_time : LibC::Float
+    mouse_double_click_max_dist : LibC::Float
+    mouse_drag_threshold : LibC::Float
+    key_repeat_delay : LibC::Float
+    key_repeat_rate : LibC::Float
+    user_data : Void*
+    fonts : ImFontAtlas*
+    font_global_scale : LibC::Float
+    font_allow_user_scaling : Bool
+    font_default : ImFont*
+    display_framebuffer_scale : Vector2
+    display_visible_min : Vector2
+    display_visible_max : Vector2
+    mouse_draw_cursor : Bool
+    config_mac_osx_behaviors : Bool
+    config_input_text_cursor_blink : Bool
+    config_windows_resize_from_edges : Bool
+    config_windows_move_from_title_bar_only : Bool
+    backend_platform_name : LibC::Char*
+    backend_renderer_name : LibC::Char*
+    backend_platform_user_data : Void*
+    backend_renderer_user_data : Void*
+    backend_language_user_data : Void*
+    get_clipboard_text_fn : Void*
+    set_clipboard_text_fn : Void*
+    clipboard_user_data : Void*
+    ime_set_input_screen_pos_fn : Void*
+    ime_window_handle : Void*
+    render_draw_lists_fn_unused : Void*
+    mouse_pos : Vector2
+    mouse_wheel : LibC::Float
+    mouse_wheel_h : LibC::Float
+    key_ctrl : Bool
+    key_shift : Bool
+    key_alt : Bool
+    key_super : Bool
+    want_capture_mouse : Bool
+    want_capture_keyboard : Bool
+    want_text_input : Bool
+    want_set_mouse_pos : Bool
+    want_save_ini_settings : Bool
+    nav_active : Bool
+    nav_visible : Bool
+    framerate : LibC::Float
+    metrics_render_vertices : LibC::Int
+    metrics_render_indices : LibC::Int
+    metrics_render_windows : LibC::Int
+    metrics_active_windows : LibC::Int
+    metrics_active_allocations : LibC::Int
+    mouse_delta : Vector2
+    mouse_pos_prev : Vector2
+    input_queue_characters : ImVector
   end
 
   struct ImGuiInputTextCallbackData
+    event_flag : ImGuiInputTextFlags
+    flags : ImGuiInputTextFlags
+    user_data : Void*
+    event_char : LibC::UShort
+    event_key : ImGuiKey
+    buf : LibC::Char*
+    buf_text_len : LibC::Int
+    buf_size : LibC::Int
+    buf_dirty : Bool
+    cursor_pos : LibC::Int
+    selection_start : LibC::Int
+    selection_end : LibC::Int
   end
 
   struct ImGuiListClipper
+    start_pos_y : LibC::Float
+    items_height : LibC::Float
+    items_count : LibC::Int
+    step_no : LibC::Int
+    display_start : LibC::Int
+    display_end : LibC::Int
   end
 
   struct ImGuiOnceUponAFrame
+    ref_frame : LibC::Int
   end
 
   struct ImGuiPayload
+    data : Void*
+    data_size : LibC::Int
+    source_id : LibC::UInt
+    source_parent_id : LibC::UInt
+    data_frame_count : LibC::Int
+    preview : Bool
+    delivery : Bool
   end
 
   struct ImGuiSizeCallbackData
+    user_data : Void*
+    pos : Vector2
+    current_size : Vector2
+    desired_size : Vector2
   end
 
   struct ImGuiStorage
+    data : ImVector
   end
 
   struct ImGuiStyle
+    alpha : LibC::Float
+    window_padding : Vector2
+    window_rounding : LibC::Float
+    window_border_size : LibC::Float
+    window_min_size : Vector2
+    window_title_align : Vector2
+    child_rounding : LibC::Float
+    child_border_size : LibC::Float
+    popup_rounding : LibC::Float
+    popup_border_size : LibC::Float
+    frame_padding : Vector2
+    frame_rounding : LibC::Float
+    frame_border_size : LibC::Float
+    item_spacing : Vector2
+    item_inner_spacing : Vector2
+    touch_extra_padding : Vector2
+    indent_spacing : LibC::Float
+    columns_min_spacing : LibC::Float
+    scrollbar_size : LibC::Float
+    scrollbar_rounding : LibC::Float
+    grab_min_size : LibC::Float
+    grab_rounding : LibC::Float
+    tab_rounding : LibC::Float
+    tab_border_size : LibC::Float
+    button_text_align : Vector2
+    display_window_padding : Vector2
+    display_safe_area_padding : Vector2
+    mouse_cursor_scale : LibC::Float
+    anti_aliased_lines : Bool
+    anti_aliased_fill : Bool
+    curve_tessellation_tol : LibC::Float
   end
 
   struct ImGuiTextBuffer
+    buf : ImVector
   end
 
   struct ImGuiTextFilter
+    filters : ImVector
+    count_grep : LibC::Int
   end
 
   struct TextRange
+    b : LibC::Char*
+    e : LibC::Char*
   end
 end

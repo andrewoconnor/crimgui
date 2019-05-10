@@ -23,6 +23,7 @@ class CodeGenerator
       "long"                  => "LibC::Long",
       "short"                 => "LibC::Short",
       "size_t"                => "LibC::SizeT",
+      "void"                  => "Void",
       "unsigned char"         => "LibC::UChar",
       "unsigned int"          => "LibC::UInt",
       "unsigned long"         => "LibC::ULong",
@@ -191,6 +192,13 @@ class CodeGenerator
     types.each do |type_def|
       next if custom_defined_types[type_def.name]?
       code_writer.begin_block("struct #{type_def.name}")
+      type_def.fields.each do |field|
+        type_str = type_string(field.type, field.function_pointer?)
+        if field.array_size > 0
+        elsif type_str
+          code_writer.write("#{field.name} : #{type_str}")
+        end
+      end
       code_writer.end_block
       code_writer.write("")
     end
@@ -198,17 +206,15 @@ class CodeGenerator
 
   def type_string(type_name, is_function_pointer)
     type_str = nil
-    ptr_level = if type_name.ends_with?("**")
-                  2
-                elsif type_name.ends_with?("*")
-                  1
-                else
-                  0
-                end
-    type_str ||= well_known_types[type_name]
-    type_str ||= well_known_types[type_name[0...-ptr_level]] if ptr_level > 0
-    ptr_level.times { type_str + "*" }
-    type_str.nil? && is_function_pointer ? "Void*" : type_str
+    ptr_level = 0
+    while type_name[-1 * ptr_level - 1] == '*'
+      ptr_level += 1
+    end
+    type_str ||= well_known_types[type_name]?
+    type_str ||= well_known_types[type_name[0...-ptr_level]]? if ptr_level > 0
+    type_str = type_str.not_nil! + "*" * ptr_level if type_str && ptr_level > 0
+    type_str ||= type_str.nil? && is_function_pointer ? "Void*" : type_name
+    type_str
   end
 end
 
@@ -367,7 +373,7 @@ class TypeReference
   end
 
   def name
-    @name ||= array_size == -1 ? raw_name : raw_name.split('[').first
+    @name ||= array_size == -1 ? raw_name.underscore : raw_name.split('[').first.underscore
   end
 
   def type
