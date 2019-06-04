@@ -14,7 +14,7 @@ class CodeGenerator
   end
 
   def well_known_types
-    {
+    @well_known_types ||= {
       "bool"                  => "Bool",
       "char"                  => "LibC::Char",
       "double"                => "LibC::Double",
@@ -55,8 +55,12 @@ class CodeGenerator
     }
   end
 
+  def legal_types
+    @legal_types ||= well_known_types.invert.as(Hash(String, String))
+  end
+
   def custom_defined_types
-    {
+    @custom_defined_types ||= {
       "ImVector" => true,
       "ImVec2"   => true,
       "ImVec4"   => true,
@@ -105,8 +109,8 @@ class CodeGenerator
     @functions_json ||= FunctionJSON.from_json(functions_file)
   end
 
-  def functions
-    @functions ||= functions_json.map { |name, overloads|
+  def function_definitions
+    @function_definitions ||= functions_json.map { |name, overloads|
       non_udt_variants? = overloads.any? { |o| o["ov_cimguiname"]?.try(&.to_s.ends_with?("nonUDT")) }
       FunctionDefinition.new(
         name,
@@ -114,7 +118,7 @@ class CodeGenerator
           ov_cimguiname = overload["ov_cimguiname"]?.to_s
           cimguiname = overload["cimguiname"]?.to_s
           friendly_name = overload["funcname"]?.try(&.to_s)
-          friendly_name = "Destroy" if cimguiname.ends_with?("_destroy")
+          friendly_name = "destroy" if cimguiname.ends_with?("_destroy")
           next unless friendly_name
           exported_name = ov_cimguiname
           exported_name = cimguiname if exported_name.empty?
@@ -138,11 +142,12 @@ class CodeGenerator
           end
           return_type = overload["ret"]?.try(&.to_s) || "void"
           struct_name = overload["stname"]?.to_s
-          is_constructor = false
-          is_destructor = false
+          is_constructor = overload.has_key?("constructor")
+          is_destructor = overload.has_key?("destructor")
           defs << OverloadDefinition.new(
             exported_name,
             friendly_name,
+            (ov_cimguiname.empty? ? cimguiname : ov_cimguiname),
             parameters,
             default_values,
             return_type,
@@ -156,8 +161,51 @@ class CodeGenerator
     }.as(Array(FunctionDefinition))
   end
 
+  def generate_functions(type_def)
+    function_definitions.each do |fd|
+      fd.overloads.each do |overload|
+        next if overload.struct_name != type_def.name
+        # next if overload.constructor?
+        exported_name = overload.raw_name.sub("ig", "")
+        next if exported_name.index("~")
+        next if overload.params.any?(&.function_pointer?)
+        has_va_list = false
+        overload.params.each do |param|
+          next if param.name == "..."
+          param_type = type_string(param.type, param.function_pointer?)
+          if param_type == "va_list"
+            has_va_list = true
+            break
+          end
+        end
+        next if has_va_list
+
+        ordered_defaults = overload.default_values.reduce({} of Int32 => Hash(String, String)) do |res, (k, v)|
+          pos = overload.params.index { |param| param.name == k }.not_nil!
+          res[pos] = {k => v}
+          res
+        end
+
+        method_name = overload.constructor? ? "allocate" : overload.name.underscore
+        func_sig = "fun #{type_def.name.downcase}_#{method_name} = #{overload.function_name}("
+
+        func_sig = func_sig + overload.params.reduce([] of String) { |params, param|
+          params.tap { |p| p << "#{param.name} : #{type_string(param.type, param.function_pointer?)}" unless param.name == "..." }
+        }.join(", ")
+        func_sig = func_sig + ")"
+        func_sig = func_sig + " : #{overload.struct_name}*" if overload.constructor?
+        func_sig = func_sig + " : #{type_string(overload.return_type, false)}" unless overload.return_type.nil? || overload.return_type == "void"
+
+        code_writer.write(func_sig)
+        # puts "#{type_def.name}.#{overload.name}"
+        # puts ordered_defaults
+      end
+    end
+    code_writer.write("")
+  end
+
   def output_path
-    @output_path ||= File.expand_path("../crimgui/imgui.cr", dir: __DIR__)
+    @output_path ||= File.expand_path("../crimgui/lib.cr", dir: __DIR__)
   end
 
   def code_writer
@@ -165,7 +213,8 @@ class CodeGenerator
   end
 
   def generate
-    code_writer.begin_block("lib ImGui")
+    code_writer.write("@[Link(\"cimgui\")]")
+    code_writer.begin_block("lib LibImGui")
     code_writer.write("# enums")
     generate_enums
     code_writer.write("# types")
@@ -195,12 +244,24 @@ class CodeGenerator
       type_def.fields.each do |field|
         type_str = type_string(field.type, field.function_pointer?)
         if field.array_size > 0
+          if legal_types[type_str]
+            code_writer.write("#{field.name} : #{type_str}[#{field.array_size}]")
+          else
+            (0..field.array_size).each { |idx| code_writer.write("#{field.name}_#{idx} : #{type_str}") }
+          end
         elsif type_str
           code_writer.write("#{field.name} : #{type_str}")
         end
       end
       code_writer.end_block
       code_writer.write("")
+
+      generate_functions(type_def)
+
+      # ptr_type_name = "#{type_def.name}Ptr"
+      # code_writer.begin_block("struct #{ptr_type_name}")
+      # code_writer.end_block
+      # code_writer.write("")
     end
   end
 
@@ -216,28 +277,94 @@ class CodeGenerator
     type_str ||= type_str.nil? && is_function_pointer ? "Void*" : type_name
     type_str
   end
+
+  def emit_overload(default_values, self_name)
+  end
 end
 
 # Custom Types
 
-struct Vector2
+struct Vector2(T)
   property x, y
 
-  def initialize(@x : LibC::Float, @y : LibC::Float)
+  def initialize
+    @x = @y = T.zero
+  end
+
+  def initialize(@x : T, @y : T)
+  end
+
+  def size : Int32
+    2
+  end
+
+  def [](i : Int) : T
+    case i
+    when 0; @x
+    when 1; @y
+    else    raise IndexError.new
+    end
+  end
+
+  def to_unsafe
+    pointerof(@x).as(Void*)
   end
 end
 
-struct Vector3
+struct Vector3(T)
   property x, y, z
 
-  def initialize(@x : LibC::Float, @y : LibC::Float, @z : LibC::Float)
+  def initialize
+    @x = @y = @z = T.zero
+  end
+
+  def initialize(@x : T, @y : T, @z : T)
+  end
+
+  def size : Int32
+    3
+  end
+
+  def [](i : Int) : T
+    case i
+    when 0; @x
+    when 1; @y
+    when 2; @z
+    else    raise IndexError.new
+    end
+  end
+
+  def to_unsafe
+    pointerof(@x).as(Void*)
   end
 end
 
 struct Vector4
   property x, y, z, w
 
-  def initialize(@x : LibC::Float, @y : LibC::Float, @z : LibC::Float, @w : LibC::Float)
+  def initialize
+    @x = @y = @z = @w = T.zero
+  end
+
+  def initialize(@x : T, @y : T, @z : T, @w : T)
+  end
+
+  def size : Int32
+    4
+  end
+
+  def [](i : Int) : T
+    case i
+    when 0; @x
+    when 1; @y
+    when 2; @z
+    when 3; @w
+    else    raise IndexError.new
+    end
+  end
+
+  def to_unsafe
+    pointerof(@x).as(Void*)
   end
 end
 
@@ -277,9 +404,9 @@ end
 # Code gen
 
 class CodeWriter
-  property path : String,
-    file : File?,
-    indent : Int32
+  property path : String
+  property file : File?
+  property indent : Int32
 
   def initialize(@path : String)
     @indent = 0
@@ -318,10 +445,10 @@ class CodeWriter
 end
 
 class EnumDefinition
-  property raw_name : String,
-    name : String?,
-    members : Array(EnumMember),
-    sanitized_names : Hash(String, Hash(String, String))?
+  property raw_name : String
+  property name : String?
+  property members : Array(EnumMember)
+  property sanitized_names : Hash(String, Hash(String, String))?
 
   def initialize(@raw_name : String, @members : Array(EnumMember))
   end
@@ -338,8 +465,8 @@ class EnumDefinition
 end
 
 class EnumMember
-  property name : String,
-    value : String
+  property name : String
+  property value : String
 
   def initialize(@name : String, @value : String)
   end
@@ -355,14 +482,14 @@ end
 class TypeReference
   include CRZ
 
-  property raw_name : String,
-    raw_type : String,
-    name : String?,
-    type : String?,
-    template_type : String?,
-    size_part : String?,
-    array_size : Int32?,
-    enums : Array(EnumDefinition)
+  property raw_name : String
+  property raw_type : String
+  property name : String?
+  property type : String?
+  property template_type : String?
+  property size_part : String?
+  property array_size : Int32?
+  property enums : Array(EnumDefinition)
 
   def initialize(
     @raw_name : String,
@@ -417,19 +544,21 @@ class FunctionDefinition
 end
 
 class OverloadDefinition
-  property raw_name : String,
-    name : String,
-    params : Array(TypeReference),
-    default_values : Hash(String, String),
-    return_type : String,
-    struct_name : String,
-    comment : String,
-    is_constructor : Bool,
-    is_destructor : Bool
+  property raw_name : String
+  property name : String
+  property function_name : String
+  property params : Array(TypeReference)
+  property default_values : Hash(String, String)
+  property return_type : String
+  property struct_name : String
+  property comment : String
+  property is_constructor : Bool
+  property is_destructor : Bool
 
   def initialize(
     @raw_name : String,
     @name : String,
+    @function_name : String,
     @params : Array(TypeReference),
     @default_values : Hash(String, String),
     return_type : String,
@@ -455,11 +584,11 @@ class OverloadDefinition
 end
 
 class MarshalledParameter
-  property type : String,
-    is_pinned : Bool,
-    var_name : String,
-    has_default_value : Bool,
-    pin_target : String?
+  property type : String
+  property is_pinned : Bool
+  property var_name : String
+  property has_default_value : Bool
+  property pin_target : String?
 
   def initialize(@type : String, @is_pinned : Bool, @var_name : String, @has_default_value : Bool)
   end
@@ -487,6 +616,20 @@ puts "\n\n\n"
 puts "\n\n\n"
 
 gen.generate
+
+# class ImGuiIO
+#   enum ImDrawCorner
+#     TopLeft  = 1 << 0
+#     TopRight = 1 << 1
+#     BotLeft  = 1 << 2
+#     BotRight = 1 << 3
+#     Top      = TopLeft | TopRight
+#     Bot      = BotLeft | BotRight
+#     Left     = TopLeft | BotLeft
+#     Right    = TopRight | BotRight
+#     All      = 0xF
+#   end
+# end
 
 # puts gen.functions
 
