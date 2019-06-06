@@ -1,5 +1,18 @@
 # Custom Types
 
+@[Extern]
+struct ImVec2
+  def initialize(@x : Number, @y : Number)
+    @x = LibC::Float.new(vec.x)
+    @y = LibC::Float.new(vec.y)
+  end
+
+  def initialize(vec : SF::Vector2)
+    @x = LibC::Float.new(vec.x)
+    @y = LibC::Float.new(vec.y)
+  end
+end
+
 struct Vector2(T)
   property x, y
 

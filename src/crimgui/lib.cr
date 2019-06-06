@@ -1,6 +1,6 @@
 require "./custom"
 
-@[Link(ldflags: "/usr/local/lib/cimgui.dylib")]
+@[Link("cimgui")]
 lib LibImGui
   # enums
   @[Flags]
@@ -410,6 +410,9 @@ lib LibImGui
   end
 
   # types
+  fun imguicontext_allocate = igCreateContext(shared_font_atlas : ImFontAtlas*) : Void*
+  fun imguicontext_destroy = igDestroyContext(self : Void*)
+
   struct CustomRect
     id : LibC::UInt
     width : LibC::UShort
@@ -686,7 +689,7 @@ lib LibImGui
   struct ImGuiIO
     config_flags : ImGuiConfigFlags
     backend_flags : ImGuiBackendFlags
-    display_size : Void*
+    display_size : ImVec2
     delta_time : LibC::Float
     ini_saving_rate : LibC::Float
     ini_filename : LibC::Char*

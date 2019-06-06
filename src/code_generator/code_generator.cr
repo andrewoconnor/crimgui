@@ -213,6 +213,8 @@ class CodeGenerator
   end
 
   def generate
+    code_writer.write("require \"./custom\"")
+    code_writer.write("")
     code_writer.write("@[Link(\"cimgui\")]")
     code_writer.begin_block("lib LibImGui")
     code_writer.write("# enums")
