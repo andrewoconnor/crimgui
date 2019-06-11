@@ -1,5 +1,9 @@
 version: 1.0
 shards:
+  crystal-raw-gl:
+    github: oprypin/crystal-raw-gl
+    commit: 4847269778b814d9a1c1ab7a2caa4c93e1896cd9
+
   crz:
     github: dhruvrajvanshi/crz
     version: 1.0.0

@@ -412,6 +412,12 @@ lib LibImGui
   # types
   fun imguicontext_allocate = igCreateContext(shared_font_atlas : ImFontAtlas*) : Void*
   fun imguicontext_destroy = igDestroyContext(self : Void*)
+  fun mouse_cursor = igGetMouseCursor : ImGuiMouseCursor
+  fun render = igRender
+  fun draw_data = igGetDrawData : ImDrawData*
+  fun new_frame = igNewFrame
+  fun end_frame = igEndFrame
+  fun io = igGetIO : ImGuiIO*
 
   struct CustomRect
     id : LibC::UInt
@@ -470,7 +476,7 @@ lib LibImGui
   fun imdrawdata_clear = ImDrawData_Clear(self : ImDrawData*)
   fun imdrawdata_de_index_all_buffers = ImDrawData_DeIndexAllBuffers(self : ImDrawData*)
   fun imdrawdata_allocate = ImDrawData_ImDrawData : ImDrawData*
-  fun imdrawdata_scale_clip_rects = ImDrawData_ScaleClipRects(self : ImDrawData*, sc : Void*)
+  fun imdrawdata_scale_clip_rects = ImDrawData_ScaleClipRects(self : ImDrawData*, sc : ImVec2)
   fun imdrawdata_destroy = ImDrawData_destroy(self : ImDrawData*)
 
   struct ImDrawList
@@ -705,7 +711,7 @@ lib LibImGui
     font_global_scale : LibC::Float
     font_allow_user_scaling : Bool
     font_default : ImFont*
-    display_framebuffer_scale : Void*
+    display_framebuffer_scale : ImVec2
     display_visible_min : Void*
     display_visible_max : Void*
     mouse_draw_cursor : Bool
@@ -724,7 +730,7 @@ lib LibImGui
     ime_set_input_screen_pos_fn : Void*
     ime_window_handle : Void*
     render_draw_lists_fn_unused : Void*
-    mouse_pos : Void*
+    mouse_pos : ImVec2
     mouse_down : Bool[5]
     mouse_wheel : LibC::Float
     mouse_wheel_h : LibC::Float

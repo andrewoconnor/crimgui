@@ -2,9 +2,11 @@
 
 @[Extern]
 struct ImVec2
-  def initialize(@x : Number, @y : Number)
-    @x = LibC::Float.new(vec.x)
-    @y = LibC::Float.new(vec.y)
+  property x, y
+
+  def initialize(x : Number, y : Number)
+    @x = LibC::Float.new(x)
+    @y = LibC::Float.new(y)
   end
 
   def initialize(vec : SF::Vector2)

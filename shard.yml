@@ -11,7 +11,9 @@ dependencies:
   crz:
     github: dhruvrajvanshi/crz
     version: ~> 1.0.0
+  crystal-raw-gl:
+    github: oprypin/crystal-raw-gl
 
 license: MIT
 
-crystal: 0.27.0
+crystal: 0.29.0
