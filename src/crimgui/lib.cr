@@ -409,7 +409,7 @@ lib LibImGui
     ChildMenu                 = 1 << 28
   end
 
-  alias ImDrawIdx = LibC::UInt
+  alias ImDrawIdx = LibC::UShort
 
   # types
   fun imguicontext_allocate = igCreateContext(shared_font_atlas : ImFontAtlas*) : Void*
@@ -423,6 +423,7 @@ lib LibImGui
   fun end = igEnd
   fun io = igGetIO : ImGuiIO*
   fun button = igButton(label : LibC::Char*, size : ImVec2) : Bool
+  fun text = igText(fmt : LibC::Char*)
 
   struct CustomRect
     id : LibC::UInt
@@ -557,8 +558,8 @@ lib LibImGui
   fun imdrawlist_destroy = ImDrawList_destroy(self : ImDrawList*)
 
   struct ImDrawVert
-    pos : Void*
-    uv : Void*
+    pos : ImVec2
+    uv : ImVec2
     col : LibC::UInt
   end
 

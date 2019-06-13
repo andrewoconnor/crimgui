@@ -15,7 +15,7 @@ module ImGui
     property mouse_cursor_loaded : Bool[LibImGui::ImGuiMouseCursor::COUNT]
     property mouse_cursors : SF::Cursor[LibImGui::ImGuiMouseCursor::COUNT]
     property font_texture : SF::Texture
-    property font_texture_handle : Int32
+    property font_texture_handle : LibC::UInt
     property io : LibImGui::ImGuiIO*?
 
     def initialize(window : SF::RenderWindow, load_default_font : Bool = true)
@@ -27,7 +27,7 @@ module ImGui
       @mouse_cursor_loaded = uninitialized Bool[LibImGui::ImGuiMouseCursor::COUNT]
       @mouse_cursors = uninitialized SF::Cursor[LibImGui::ImGuiMouseCursor::COUNT]
       @font_texture = SF::Texture.new
-      @font_texture_handle = font_texture.native_handle
+      @font_texture_handle = LibC::UInt.new(font_texture.native_handle)
       @window_has_focus = false
       @mouse_moved = false
     end
@@ -48,6 +48,10 @@ module ImGui
 
       font_texture.create(width, height)
       font_texture.update(pixels)
+
+      @font_texture_handle = LibC::UInt.new(font_texture.native_handle)
+
+      puts "native_handle: #{@font_texture_handle}"
 
       imgui_io.value.fonts.value.tex_id = pointerof(@font_texture_handle).as(Void*) # maybe memcpy?
     end
@@ -88,6 +92,10 @@ module ImGui
       LibImGui.button(label, size)
     end
 
+    def text(fmt : String)
+      LibImGui.text(fmt)
+    end
+
     def draw(target : SF::RenderTarget, states : SF::RenderStates)
       draw_data = LibImGui.draw_data
       return if draw_data.null? || draw_data.value.cmd_lists_count == 0
@@ -117,7 +125,12 @@ module ImGui
       GL.enable_client_state(GL::COLOR_ARRAY)
       GL.enable_client_state(GL::TEXTURE_COORD_ARRAY)
 
-      GL.viewport(GL::Int.new(0), GL::Int.new(0), GL::Sizei.new(frame_buffer_width), GL::Sizei.new(frame_buffer_height))
+      GL.viewport(
+        GL::Int.new(0),
+        GL::Int.new(0),
+        GL::Sizei.new(frame_buffer_width),
+        GL::Sizei.new(frame_buffer_height)
+      )
 
       GL.matrix_mode(GL::TEXTURE)
       GL.load_identity
@@ -126,32 +139,39 @@ module ImGui
       GL.load_identity
 
       {% if GL.has_constant?("VERSION_ES_CL_1_1") %}
-        GL.orthof(0.0_f32, io.value.display_size.x, io.value.display_size.y, 0.0_f32, -1.0, 1.0)
+        GL.orthof(
+          GL::Double.new(0),
+          GL::Double.new(io.value.display_size.x / io.value.display_framebuffer_scale.x),
+          GL::Double.new(io.value.display_size.y / io.value.display_framebuffer_scale.y),
+          GL::Double.new(0),
+          GL::Double.new(-1),
+          GL::Double.new(1)
+        )
       {% else %}
-        GL.ortho(0.0_f32, io.value.display_size.x, io.value.display_size.y, 0.0_f32, -1.0, 1.0)
+        GL.ortho(
+          GL::Double.new(0),
+          GL::Double.new(io.value.display_size.x / io.value.display_framebuffer_scale.x),
+          GL::Double.new(io.value.display_size.y / io.value.display_framebuffer_scale.y),
+          GL::Double.new(0),
+          GL::Double.new(-1),
+          GL::Double.new(1)
+        )
       {% end %}
 
       GL.matrix_mode(GL::MODELVIEW)
       GL.load_identity
 
       (0...draw_data.value.cmd_lists_count).each do |n|
-        # puts "cmd_lists_count: #{n}"
         cmd_list = draw_data.value.cmd_lists[n]
         vtx_buffer = cmd_list.value.vtx_buffer.data.as(LibC::UChar*)
         idx_buffer = cmd_list.value.idx_buffer.data.as(LibImGui::ImDrawIdx*)
-
-        # puts cmd_list.value.cmd_buffer
-        # puts "idx_buffer: #{idx_buffer.value}"
 
         GL.vertex_pointer(2, GL::FLOAT, sizeof(LibImGui::ImDrawVert), (vtx_buffer + offsetof(LibImGui::ImDrawVert, @pos)).as(Void*))
         GL.tex_coord_pointer(2, GL::FLOAT, sizeof(LibImGui::ImDrawVert), (vtx_buffer + offsetof(LibImGui::ImDrawVert, @uv)).as(Void*))
         GL.color_pointer(4, GL::UNSIGNED_BYTE, sizeof(LibImGui::ImDrawVert), (vtx_buffer + offsetof(LibImGui::ImDrawVert, @col)).as(Void*))
 
         (0...cmd_list.value.cmd_buffer.size).each do |cmd_idx|
-          # puts "cmd_idx #{cmd_idx}"
           pcmd = cmd_list.value.cmd_buffer.data.as(LibImGui::ImDrawCmd*) + cmd_idx
-
-          puts pcmd.value.clip_rect
 
           if pcmd.value.user_callback.null?
             GL.bind_texture(GL::TEXTURE_2D, pcmd.value.texture_id.as(GL::Uint*).value)
@@ -253,8 +273,6 @@ module ImGui
         load_cursor(LibImGui::ImGuiMouseCursor::ResizeNWSE, SF::Cursor::SizeTopLeftBottomRight)
         load_cursor(LibImGui::ImGuiMouseCursor::Hand, SF::Cursor::Hand)
 
-        @font_texture = SF::Texture.new
-        @font_texture_handle = font_texture.native_handle
         update_font_texture(i) if load_default_font
 
         window_has_focus = window.focus?
@@ -270,6 +288,12 @@ window = SF::RenderWindow
   .tap { |w|
     w.vertical_sync_enabled = true
   }.as(SF::RenderWindow)
+
+rectangle = SF::RectangleShape.new
+rectangle.size = SF.vector2f(44, 34)
+rectangle.outline_color = SF::Color::Red
+rectangle.outline_thickness = 5
+rectangle.position = {64, 79}
 
 clock = SF::Clock.new
 
@@ -302,9 +326,9 @@ while window.open?
   imgui.button("Test")
   imgui.end
   imgui.end_frame
-  imgui.render
 
   window.clear
+  imgui.render
   window.draw(imgui)
   window.display
 end
