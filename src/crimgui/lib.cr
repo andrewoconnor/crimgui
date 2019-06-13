@@ -409,6 +409,8 @@ lib LibImGui
     ChildMenu                 = 1 << 28
   end
 
+  alias ImDrawIdx = LibC::UInt
+
   # types
   fun imguicontext_allocate = igCreateContext(shared_font_atlas : ImFontAtlas*) : Void*
   fun imguicontext_destroy = igDestroyContext(self : Void*)
@@ -417,7 +419,10 @@ lib LibImGui
   fun draw_data = igGetDrawData : ImDrawData*
   fun new_frame = igNewFrame
   fun end_frame = igEndFrame
+  fun begin = igBegin(name : LibC::Char*, p_open : Bool*, flags : ImGuiWindowFlags) : Bool
+  fun end = igEnd
   fun io = igGetIO : ImGuiIO*
+  fun button = igButton(label : LibC::Char*, size : ImVec2) : Bool
 
   struct CustomRect
     id : LibC::UInt
@@ -454,7 +459,7 @@ lib LibImGui
 
   struct ImDrawCmd
     elem_count : LibC::UInt
-    clip_rect : Void*
+    clip_rect : ImVec4
     texture_id : Void*
     user_callback : Void*
     user_callback_data : Void*
@@ -480,9 +485,9 @@ lib LibImGui
   fun imdrawdata_destroy = ImDrawData_destroy(self : ImDrawData*)
 
   struct ImDrawList
-    cmd_buffer : Void*
-    idx_buffer : Void*
-    vtx_buffer : Void*
+    cmd_buffer : ImVector
+    idx_buffer : ImVector
+    vtx_buffer : ImVector
     flags : ImDrawListFlags
     _data : Void**
     _owner_name : LibC::Char*

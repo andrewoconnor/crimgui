@@ -15,119 +15,134 @@ struct ImVec2
   end
 end
 
-struct Vector2(T)
-  property x, y
-
-  def initialize
-    @x = @y = T.zero
-  end
-
-  def initialize(@x : T, @y : T)
-  end
-
-  def size : Int32
-    2
-  end
-
-  def [](i : Int) : T
-    case i
-    when 0; @x
-    when 1; @y
-    else    raise IndexError.new
-    end
-  end
-
-  def to_unsafe
-    pointerof(@x).as(Void*)
-  end
-end
-
-struct Vector3(T)
-  property x, y, z
-
-  def initialize
-    @x = @y = @z = T.zero
-  end
-
-  def initialize(@x : T, @y : T, @z : T)
-  end
-
-  def size : Int32
-    3
-  end
-
-  def [](i : Int) : T
-    case i
-    when 0; @x
-    when 1; @y
-    when 2; @z
-    else    raise IndexError.new
-    end
-  end
-
-  def to_unsafe
-    pointerof(@x).as(Void*)
-  end
-end
-
-struct Vector4
+@[Extern]
+struct ImVec4
   property x, y, z, w
 
-  def initialize
-    @x = @y = @z = @w = T.zero
-  end
-
-  def initialize(@x : T, @y : T, @z : T, @w : T)
-  end
-
-  def size : Int32
-    4
-  end
-
-  def [](i : Int) : T
-    case i
-    when 0; @x
-    when 1; @y
-    when 2; @z
-    when 3; @w
-    else    raise IndexError.new
-    end
-  end
-
-  def to_unsafe
-    pointerof(@x).as(Void*)
+  def initialize(x : Number, y : Number, z : Number, w : Number)
+    @x = LibC::Float.new(x)
+    @y = LibC::Float.new(y)
+    @z = LibC::Float.new(z)
+    @w = LibC::Float.new(w)
   end
 end
 
-struct Pair
-  property key, value
+# struct Vector2(T)
+#   property x, y
 
-  def initialize(@key : LibC::UInt, @value : (LibC::Int | LibC::Float | Void*))
-  end
-end
+#   def initialize
+#     @x = @y = T.zero
+#   end
 
-struct ImVec
+#   def initialize(@x : T, @y : T)
+#   end
+
+#   def size : Int32
+#     2
+#   end
+
+#   def [](i : Int) : T
+#     case i
+#     when 0; @x
+#     when 1; @y
+#     else    raise IndexError.new
+#     end
+#   end
+
+#   def to_unsafe
+#     pointerof(@x).as(Void*)
+#   end
+# end
+
+# struct Vector3(T)
+#   property x, y, z
+
+#   def initialize
+#     @x = @y = @z = T.zero
+#   end
+
+#   def initialize(@x : T, @y : T, @z : T)
+#   end
+
+#   def size : Int32
+#     3
+#   end
+
+#   def [](i : Int) : T
+#     case i
+#     when 0; @x
+#     when 1; @y
+#     when 2; @z
+#     else    raise IndexError.new
+#     end
+#   end
+
+#   def to_unsafe
+#     pointerof(@x).as(Void*)
+#   end
+# end
+
+# struct Vector4
+#   property x, y, z, w
+
+#   def initialize
+#     @x = @y = @z = @w = T.zero
+#   end
+
+#   def initialize(@x : T, @y : T, @z : T, @w : T)
+#   end
+
+#   def size : Int32
+#     4
+#   end
+
+#   def [](i : Int) : T
+#     case i
+#     when 0; @x
+#     when 1; @y
+#     when 2; @z
+#     when 3; @w
+#     else    raise IndexError.new
+#     end
+#   end
+
+#   def to_unsafe
+#     pointerof(@x).as(Void*)
+#   end
+# end
+
+# struct Pair
+#   property key, value
+
+#   def initialize(@key : LibC::UInt, @value : (LibC::Int | LibC::Float | Void*))
+#   end
+# end
+
+@[Extern]
+struct ImVector
   property size, capacity, data
 
   def initialize(@size : LibC::Int, @capacity : LibC::Int, @data : Void*)
   end
 end
 
-struct ImVector(T)
-  property size, capacity, data, slice
+# @[Extern]
+# struct ImVector(T)
+#   property size, capacity, data
 
-  def initialize(vector : ImVector)
-    @size = vector.size
-    @capacity = vector.capacity
-    @data = vector.data
-    @slice = Slice(T).new(Box(Pointer(T)).unbox(data), capacity)
-  end
+#   def initialize(vector : ImVector)
+#     @size = vector.size
+#     @capacity = vector.capacity
+#     @data = vector.data
+#     # @slice = Slice(T).new(Box(Pointer(T)).unbox(data), capacity)
+#   end
 
-  def initialize(@size : LibC::Int, @capacity : LibC::Int, @data : Void*)
-    @slice = Slice(T).new(Box(Pointer(T)).unbox(data), capacity)
-  end
+#   def initialize(@size : LibC::Int, @capacity : LibC::Int, @data : Void*)
+#     # @slice = Slice(T).new(Box(Pointer(T)).unbox(data), capacity)
+#   end
 
-  def [](index : Int)
-    slice[index]
-  end
-end
+#   def [](index : Int)
+#     data.as(Pointer(T))[index]
+#     # slice[index]
+#   end
+# end

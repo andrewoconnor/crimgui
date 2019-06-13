@@ -49,7 +49,7 @@ module ImGui
       font_texture.create(width, height)
       font_texture.update(pixels)
 
-      imgui_io.value.fonts.value.tex_id = pointerof(@font_texture_handle).as(Void*)
+      imgui_io.value.fonts.value.tex_id = pointerof(@font_texture_handle).as(Void*) # maybe memcpy?
     end
 
     def display_size
@@ -72,8 +72,20 @@ module ImGui
       LibImGui.end_frame
     end
 
+    def begin
+      LibImGui.begin("crimgui", Pointer(Bool).null, LibImGui::ImGuiWindowFlags::None)
+    end
+
+    def end
+      LibImGui.end
+    end
+
     def render
       LibImGui.render
+    end
+
+    def button(label : String, size : ImVec2 = ImVec2.new(0, 0))
+      LibImGui.button(label, size)
     end
 
     def draw(target : SF::RenderTarget, states : SF::RenderStates)
@@ -92,6 +104,79 @@ module ImGui
         GL.get_integerv(GL::ELEMENT_ARRAY_BUFFER_BINDING, out last_element_array_buffer)
       {% else %}
         GL.push_attrib(GL::ENABLE_BIT | GL::COLOR_BUFFER_BIT | GL::TRANSFORM_BIT)
+      {% end %}
+
+      GL.enable(GL::BLEND)
+      GL.blend_func(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA)
+      GL.disable(GL::CULL_FACE)
+      GL.disable(GL::DEPTH_TEST)
+      GL.enable(GL::SCISSOR_TEST)
+      GL.enable(GL::TEXTURE_2D)
+      GL.disable(GL::LIGHTING)
+      GL.enable_client_state(GL::VERTEX_ARRAY)
+      GL.enable_client_state(GL::COLOR_ARRAY)
+      GL.enable_client_state(GL::TEXTURE_COORD_ARRAY)
+
+      GL.viewport(GL::Int.new(0), GL::Int.new(0), GL::Sizei.new(frame_buffer_width), GL::Sizei.new(frame_buffer_height))
+
+      GL.matrix_mode(GL::TEXTURE)
+      GL.load_identity
+
+      GL.matrix_mode(GL::PROJECTION)
+      GL.load_identity
+
+      {% if GL.has_constant?("VERSION_ES_CL_1_1") %}
+        GL.orthof(0.0_f32, io.value.display_size.x, io.value.display_size.y, 0.0_f32, -1.0, 1.0)
+      {% else %}
+        GL.ortho(0.0_f32, io.value.display_size.x, io.value.display_size.y, 0.0_f32, -1.0, 1.0)
+      {% end %}
+
+      GL.matrix_mode(GL::MODELVIEW)
+      GL.load_identity
+
+      (0...draw_data.value.cmd_lists_count).each do |n|
+        # puts "cmd_lists_count: #{n}"
+        cmd_list = draw_data.value.cmd_lists[n]
+        vtx_buffer = cmd_list.value.vtx_buffer.data.as(LibC::UChar*)
+        idx_buffer = cmd_list.value.idx_buffer.data.as(LibImGui::ImDrawIdx*)
+
+        # puts cmd_list.value.cmd_buffer
+        # puts "idx_buffer: #{idx_buffer.value}"
+
+        GL.vertex_pointer(2, GL::FLOAT, sizeof(LibImGui::ImDrawVert), (vtx_buffer + offsetof(LibImGui::ImDrawVert, @pos)).as(Void*))
+        GL.tex_coord_pointer(2, GL::FLOAT, sizeof(LibImGui::ImDrawVert), (vtx_buffer + offsetof(LibImGui::ImDrawVert, @uv)).as(Void*))
+        GL.color_pointer(4, GL::UNSIGNED_BYTE, sizeof(LibImGui::ImDrawVert), (vtx_buffer + offsetof(LibImGui::ImDrawVert, @col)).as(Void*))
+
+        (0...cmd_list.value.cmd_buffer.size).each do |cmd_idx|
+          # puts "cmd_idx #{cmd_idx}"
+          pcmd = cmd_list.value.cmd_buffer.data.as(LibImGui::ImDrawCmd*) + cmd_idx
+
+          puts pcmd.value.clip_rect
+
+          if pcmd.value.user_callback.null?
+            GL.bind_texture(GL::TEXTURE_2D, pcmd.value.texture_id.as(GL::Uint*).value)
+            GL.scissor(
+              GL::Int.new(pcmd.value.clip_rect.x),
+              GL::Int.new(frame_buffer_height - pcmd.value.clip_rect.w),
+              GL::Sizei.new(pcmd.value.clip_rect.z - pcmd.value.clip_rect.x),
+              GL::Sizei.new(pcmd.value.clip_rect.w - pcmd.value.clip_rect.y)
+            )
+            GL.draw_elements(GL::TRIANGLES, GL::Sizei.new(pcmd.value.elem_count), GL::UNSIGNED_SHORT, idx_buffer)
+          else
+            # TODO handle callback
+          end
+
+          idx_buffer = idx_buffer + pcmd.value.elem_count
+        end
+      end
+
+      {% if GL.has_constant?("VERSION_ES_CL_1_1") %}
+        GL.bind_texture(GL::TEXTURE_2D, last_texture)
+        GL.bind_buffer(GL::ARRAY_BUFFER, last_array_buffer)
+        GL.bind_buffer(GL::ELEMENT_ARRAY_BUFFER, last_element_array_buffer)
+        GL.disable(GL::SCISSOR_TEST)
+      {% else %}
+        GL.pop_attrib
       {% end %}
     end
 
@@ -199,11 +284,27 @@ puts imgui.io.value.display_framebuffer_scale
 puts imgui.mouse_cursor_loaded
 puts imgui.io.value.fonts.value.tex_id
 
-imgui.update(clock.restart.as_seconds)
-puts imgui.io.value.delta_time
-puts imgui.io.value.mouse_pos
-imgui.new_frame
-imgui.end_frame
-imgui.render
+while window.open?
+  while event = window.poll_event
+    case event
+    when SF::Event::Closed
+      window.close
+    when SF::Event::KeyPressed
+      window.close if event.code == SF::Keyboard::Escape
+    end
+  end
 
-window.draw(imgui)
+  imgui.update(clock.restart.as_seconds)
+  # puts imgui.io.value.delta_time
+  # puts imgui.io.value.mouse_pos
+  imgui.new_frame
+  imgui.begin
+  imgui.button("Test")
+  imgui.end
+  imgui.end_frame
+  imgui.render
+
+  window.clear
+  window.draw(imgui)
+  window.display
+end
