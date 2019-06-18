@@ -424,6 +424,17 @@ lib LibImGui
   fun io = igGetIO : ImGuiIO*
   fun button = igButton(label : LibC::Char*, size : ImVec2) : Bool
   fun text = igText(fmt : LibC::Char*)
+  fun window_size = igGetWindowSize : ImVec2
+  fun window_position = igGetWindowPos : ImVec2
+  fun set_window_size_str = igSetWindowSizeStr(name : LibC::Char*, size : ImVec2, cond : ImGuiCond)
+  fun mouse_position_valid? = igIsMousePosValid(mouse_pos : ImVec2) : Bool
+  fun show_demo_window = igShowDemoWindow(p_open : Bool*)
+  fun show_metrics_window = igShowMetricsWindow(p_open : Bool*)
+  fun show_user_guide = igShowUserGuide
+  fun mouse_down? = igIsMouseDown(button : LibC::Int) : Bool
+  fun any_mouse_down? = igIsAnyMouseDown : Bool
+  fun capture_mouse_from_app = igCaptureMouseFromApp(want_capture_mouse_value : Bool)
+  fun frame_count = igGetFrameCount : LibC::Int
 
   struct CustomRect
     id : LibC::UInt
@@ -718,8 +729,6 @@ lib LibImGui
     font_allow_user_scaling : Bool
     font_default : ImFont*
     display_framebuffer_scale : ImVec2
-    display_visible_min : Void*
-    display_visible_max : Void*
     mouse_draw_cursor : Bool
     config_mac_osx_behaviors : Bool
     config_input_text_cursor_blink : Bool
@@ -731,9 +740,12 @@ lib LibImGui
     backend_renderer_user_data : Void*
     backend_language_user_data : Void*
     get_clipboard_text_fn : Void*
+    # get_clipboard_text_fn : Void* -> LibC::Char*
     set_clipboard_text_fn : Void*
+    # set_clipboard_text_fn : Void*, LibC::Char* -> Void*
     clipboard_user_data : Void*
     ime_set_input_screen_pos_fn : Void*
+    # ime_set_input_screen_pos_fn : LibC::Int, LibC::Int -> Void*
     ime_window_handle : Void*
     render_draw_lists_fn_unused : Void*
     mouse_pos : ImVec2
@@ -745,7 +757,7 @@ lib LibImGui
     key_alt : Bool
     key_super : Bool
     keys_down : Bool[512]
-    nav_inputs : LibC::Float[21]
+    nav_inputs : LibC::Float[22]
     want_capture_mouse : Bool
     want_capture_keyboard : Bool
     want_text_input : Bool
@@ -759,23 +771,24 @@ lib LibImGui
     metrics_render_windows : LibC::Int
     metrics_active_windows : LibC::Int
     metrics_active_allocations : LibC::Int
-    mouse_delta : Void*
-    mouse_pos_prev : Void*
-    mouse_clicked_pos : Void*[5]
+    mouse_delta : ImVec2
+    mouse_pos_prev : ImVec2
+    mouse_clicked_pos : ImVec2[5]
     mouse_clicked_time : LibC::Double[5]
     mouse_clicked : Bool[5]
     mouse_double_clicked : Bool[5]
     mouse_released : Bool[5]
     mouse_down_owned : Bool[5]
+    mouse_down_was_double_click : Bool[5]
     mouse_down_duration : LibC::Float[5]
     mouse_down_duration_prev : LibC::Float[5]
-    mouse_drag_max_distance_abs : Void*[5]
+    mouse_drag_max_distance_abs : ImVec2[5]
     mouse_drag_max_distance_sqr : LibC::Float[5]
     keys_down_duration : LibC::Float[512]
     keys_down_duration_prev : LibC::Float[512]
-    nav_inputs_down_duration : LibC::Float[21]
-    nav_inputs_down_duration_prev : LibC::Float[21]
-    input_queue_characters : Void*
+    nav_inputs_down_duration : LibC::Float[22]
+    nav_inputs_down_duration_prev : LibC::Float[22]
+    input_queue_characters : ImVector
   end
 
   fun imguiio_add_input_character = ImGuiIO_AddInputCharacter(self : ImGuiIO*, c : LibC::UShort)
