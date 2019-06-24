@@ -6,11 +6,11 @@ class CodeGenerator
   alias FunctionJSON = Hash(String, Array(Hash(String, (Bool | Int32 | String | Array(Hash(String, String)) | Hash(String, String)))))
 
   def types_file
-    @types_file ||= File.read(File.expand_path("json/structs_and_enums.json", dir: __DIR__))
+    @types_file ||= File.read(File.expand_path("../../json/structs_and_enums.json", dir: __DIR__))
   end
 
   def functions_file
-    @functions_file ||= File.read(File.expand_path("json/definitions.json", dir: __DIR__))
+    @functions_file ||= File.read(File.expand_path("../../json/definitions.json", dir: __DIR__))
   end
 
   def well_known_types
@@ -29,11 +29,11 @@ class CodeGenerator
       "unsigned long"         => "LibC::ULong",
       "unsigned short"        => "LibC::UShort",
       "ImWchar"               => "LibC::UShort",
-      "ImVec2"                => "Vector2",
-      "ImVec2_Simple"         => "Vector2",
+      "ImVec2"                => "ImVec2",
+      "ImVec2_Simple"         => "ImVec2",
       "ImVec3"                => "Vector3",
-      "ImVec4"                => "Vector4",
-      "ImVec4_Simple"         => "Vector4",
+      "ImVec4"                => "ImVec4",
+      "ImVec4_Simple"         => "ImVec4",
       "ImColor_Simple"        => "ImColor",
       "ImTextureID"           => "Void*",
       "ImGuiID"               => "LibC::UInt",
@@ -43,15 +43,15 @@ class CodeGenerator
       "ImU32"                 => "LibC::UInt",
       "ImDrawCallback"        => "Void*",
       "ImGuiContext*"         => "Void*",
-      "float[2]"              => "Vector2*",
-      "float[3]"              => "Vector3*",
-      "float[4]"              => "Vector4*",
+      "float[2]"              => "LibC::Float*",
+      "float[3]"              => "LibC::Float*",
+      "float[4]"              => "LibC::Float*",
       "int[2]"                => "LibC::Int*",
       "int[3]"                => "LibC::Int*",
       "int[4]"                => "LibC::Int*",
       "float&"                => "LibC::Float*",
-      "ImVec2[2]"             => "Vector2*",
-      "char* []"              => "LibC::Char**",
+      # "ImVec2[2]"             => "Vector2*",
+      "char* []" => "LibC::Char**",
     }
   end
 
@@ -80,7 +80,7 @@ class CodeGenerator
     @enums ||= enums_json.map { |name, members|
       EnumDefinition.new(
         name,
-        members.map { |m| EnumMember.new(m["name"].to_s, m["value"].to_s) }
+        members.map { |m| EnumMember.new(name, m["name"].to_s, m["value"].to_s) }
       )
     }.as(Array(EnumDefinition))
   end
@@ -97,9 +97,10 @@ class CodeGenerator
           refs << TypeReference.new(
             field["name"].to_s,
             field["type"].to_s,
+            field["size"]?.try(&.to_i),
             field["template_type"]?.try(&.to_s),
             enums
-          ) unless field["type"].to_s.index("static")
+          ) unless field["type"].to_s.includes?("static")
         }
       )
     }.as(Array(TypeDefinition))
@@ -111,7 +112,7 @@ class CodeGenerator
 
   def function_definitions
     @function_definitions ||= functions_json.map { |name, overloads|
-      non_udt_variants? = overloads.any? { |o| o["ov_cimguiname"]?.try(&.to_s.ends_with?("nonUDT")) }
+      non_udt_variants = overloads.any? { |o| o["ov_cimguiname"]?.try(&.to_s.ends_with?("nonUDT")) }
       FunctionDefinition.new(
         name,
         overloads.each_with_object([] of OverloadDefinition) { |overload, defs|
@@ -122,15 +123,15 @@ class CodeGenerator
           next unless friendly_name
           exported_name = ov_cimguiname
           exported_name = cimguiname if exported_name.empty?
-          next if non_udt_variants? && !exported_name.ends_with?("nonUDT2")
+          next if non_udt_variants && !exported_name.ends_with?("nonUDT2")
           underscore_pos = exported_name.index('_')
-          fix_function_name? = !underscore_pos.nil? && underscore_pos > 0
-          fix_function_name? &= !exported_name.starts_with?("ig")
-          self_type_name = exported_name[0...underscore_pos.not_nil!] if fix_function_name?
+          fix_function_name = !underscore_pos.nil? && underscore_pos > 0 && !exported_name.starts_with?("ig")
+          self_type_name = exported_name[0...underscore_pos.not_nil!] if fix_function_name
           parameters = overload["argsT"].as(Array(Hash(String, String))).map { |arg|
             TypeReference.new(
               arg["name"].to_s,
               arg["type"].to_s,
+              nil,
               nil,
               enums
             )
@@ -161,13 +162,57 @@ class CodeGenerator
     }.as(Array(FunctionDefinition))
   end
 
-  def generate_functions(type_def)
+  # def generate_functions(type_def)
+  #   function_definitions.each do |fd|
+  #     fd.overloads.each do |overload|
+  #       next if overload.struct_name != type_def.name
+  #       # next if overload.constructor?
+  #       exported_name = overload.raw_name.sub("ig", "")
+  #       next if exported_name.includes?('~')
+  #       next if overload.params.any?(&.function_pointer?)
+  #       has_va_list = false
+  #       overload.params.each do |param|
+  #         next if param.name == "..."
+  #         param_type = type_string(param.type, param.function_pointer?)
+  #         if param_type == "va_list"
+  #           has_va_list = true
+  #           break
+  #         end
+  #       end
+  #       next if has_va_list
+
+  #       ordered_defaults = overload.default_values.reduce({} of Int32 => Hash(String, String)) do |res, (k, v)|
+  #         pos = overload.params.index { |param| param.name == k }.not_nil!
+  #         res[pos] = {k => v}
+  #         res
+  #       end
+
+  #       method_name = overload.constructor? ? "allocate" : overload.name.underscore
+  #       func_sig = "fun #{type_def.name.downcase}_#{method_name} = #{overload.function_name}("
+
+  #       func_sig = func_sig + overload.params.reduce([] of String) { |params, param|
+  #         params.tap { |p| p << "#{param.name} : #{type_string(param.type, param.function_pointer?)}" unless param.name == "..." }
+  #       }.join(", ")
+  #       func_sig = func_sig + ")"
+  #       func_sig = func_sig + " : #{overload.struct_name}*" if overload.constructor?
+  #       func_sig = func_sig + " : #{type_string(overload.return_type, false)}" unless overload.return_type.nil? || overload.return_type == "void"
+
+  #       code_writer.write(func_sig)
+  #       # puts "#{type_def.name}.#{overload.name}"
+  #       # puts ordered_defaults
+  #     end
+  #   end
+  #   code_writer.write("")
+  # end
+
+  def generate_functions
     function_definitions.each do |fd|
       fd.overloads.each do |overload|
-        next if overload.struct_name != type_def.name
+        # next if overload.struct_name != type_def.name
         # next if overload.constructor?
         exported_name = overload.raw_name.sub("ig", "")
-        next if exported_name.index("~")
+        next if exported_name.includes?('~')
+        next if exported_name.ends_with?("_const")
         next if overload.params.any?(&.function_pointer?)
         has_va_list = false
         overload.params.each do |param|
@@ -186,8 +231,12 @@ class CodeGenerator
           res
         end
 
-        method_name = overload.constructor? ? "allocate" : overload.name.underscore
-        func_sig = "fun #{type_def.name.downcase}_#{method_name} = #{overload.function_name}("
+        # method_name = overload.constructor? ? "allocate" : overload.name.underscore
+        method_name = overload.struct_name.underscore
+        # puts method_name
+        method_name += '_' unless method_name.empty?
+        method_name += overload.name.underscore
+        func_sig = "fun #{method_name} = #{overload.function_name}("
 
         func_sig = func_sig + overload.params.reduce([] of String) { |params, param|
           params.tap { |p| p << "#{param.name} : #{type_string(param.type, param.function_pointer?)}" unless param.name == "..." }
@@ -197,15 +246,12 @@ class CodeGenerator
         func_sig = func_sig + " : #{type_string(overload.return_type, false)}" unless overload.return_type.nil? || overload.return_type == "void"
 
         code_writer.write(func_sig)
-        # puts "#{type_def.name}.#{overload.name}"
-        # puts ordered_defaults
       end
     end
-    code_writer.write("")
   end
 
   def output_path
-    @output_path ||= File.expand_path("../crimgui/lib.cr", dir: __DIR__)
+    @output_path ||= File.expand_path("../crimgui/lib2.cr", dir: __DIR__)
   end
 
   def code_writer
@@ -219,20 +265,23 @@ class CodeGenerator
     code_writer.begin_block("lib LibImGui")
     code_writer.write("# enums")
     generate_enums
+    code_writer.write("alias ImDrawIdx = LibC::UShort")
+    code_writer.write("")
     code_writer.write("# types")
     generate_types
+    code_writer.write("")
+    code_writer.write("# functions")
+    generate_functions
     code_writer.end_block
     code_writer.finish
   end
 
   def generate_enums
     enums.each do |enum_def|
-      code_writer.write("@[Flags]") if enum_def.name.index("Flags")
+      code_writer.write("@[Flags]") if enum_def.flag?
       code_writer.begin_block("enum #{enum_def.name}")
-      enum_def.sanitized_names.each do |k, member|
-        member.each do |name, value|
-          code_writer.write("#{name} = #{value}")
-        end
+      enum_def.members.each do |member|
+        code_writer.write("#{member.name} = #{member.value}")
       end
       code_writer.end_block
       code_writer.write("")
@@ -245,12 +294,8 @@ class CodeGenerator
       code_writer.begin_block("struct #{type_def.name}")
       type_def.fields.each do |field|
         type_str = type_string(field.type, field.function_pointer?)
-        if field.array_size > 0
-          if legal_types[type_str]
-            code_writer.write("#{field.name} : #{type_str}[#{field.array_size}]")
-          else
-            (0..field.array_size).each { |idx| code_writer.write("#{field.name}_#{idx} : #{type_str}") }
-          end
+        if field.array_size && legal_types[type_str]
+          code_writer.write("#{field.name} : #{type_str}[#{field.array_size}]")
         elsif type_str
           code_writer.write("#{field.name} : #{type_str}")
         end
@@ -258,12 +303,7 @@ class CodeGenerator
       code_writer.end_block
       code_writer.write("")
 
-      generate_functions(type_def)
-
-      # ptr_type_name = "#{type_def.name}Ptr"
-      # code_writer.begin_block("struct #{ptr_type_name}")
-      # code_writer.end_block
-      # code_writer.write("")
+      # generate_functions(type_def)
     end
   end
 
@@ -281,125 +321,6 @@ class CodeGenerator
   end
 
   def emit_overload(default_values, self_name)
-  end
-end
-
-# Custom Types
-
-struct Vector2(T)
-  property x, y
-
-  def initialize
-    @x = @y = T.zero
-  end
-
-  def initialize(@x : T, @y : T)
-  end
-
-  def size : Int32
-    2
-  end
-
-  def [](i : Int) : T
-    case i
-    when 0; @x
-    when 1; @y
-    else    raise IndexError.new
-    end
-  end
-
-  def to_unsafe
-    pointerof(@x).as(Void*)
-  end
-end
-
-struct Vector3(T)
-  property x, y, z
-
-  def initialize
-    @x = @y = @z = T.zero
-  end
-
-  def initialize(@x : T, @y : T, @z : T)
-  end
-
-  def size : Int32
-    3
-  end
-
-  def [](i : Int) : T
-    case i
-    when 0; @x
-    when 1; @y
-    when 2; @z
-    else    raise IndexError.new
-    end
-  end
-
-  def to_unsafe
-    pointerof(@x).as(Void*)
-  end
-end
-
-struct Vector4
-  property x, y, z, w
-
-  def initialize
-    @x = @y = @z = @w = T.zero
-  end
-
-  def initialize(@x : T, @y : T, @z : T, @w : T)
-  end
-
-  def size : Int32
-    4
-  end
-
-  def [](i : Int) : T
-    case i
-    when 0; @x
-    when 1; @y
-    when 2; @z
-    when 3; @w
-    else    raise IndexError.new
-    end
-  end
-
-  def to_unsafe
-    pointerof(@x).as(Void*)
-  end
-end
-
-struct Pair
-  property key, value
-
-  def initialize(@key : LibC::UInt, @value : (LibC::Int | LibC::Float | Void*))
-  end
-end
-
-struct ImVec
-  property size, capacity, data
-
-  def initialize(@size : LibC::Int, @capacity : LibC::Int, @data : Void*)
-  end
-end
-
-struct ImVector(T)
-  property size, capacity, data, slice
-
-  def initialize(vector : ImVector)
-    @size = vector.size
-    @capacity = vector.capacity
-    @data = vector.data
-    @slice = Slice(T).new(Box(Pointer(T)).unbox(data), capacity)
-  end
-
-  def initialize(@size : LibC::Int, @capacity : LibC::Int, @data : Void*)
-    @slice = Slice(T).new(Box(Pointer(T)).unbox(data), capacity)
-  end
-
-  def [](index : Int)
-    slice[index]
   end
 end
 
@@ -450,7 +371,6 @@ class EnumDefinition
   property raw_name : String
   property name : String?
   property members : Array(EnumMember)
-  property sanitized_names : Hash(String, Hash(String, String))?
 
   def initialize(@raw_name : String, @members : Array(EnumMember))
   end
@@ -459,18 +379,27 @@ class EnumDefinition
     @name ||= raw_name.rchop("_")
   end
 
-  def sanitized_names
-    @sanitized_names ||= members.reduce({} of String => Hash(String, String)) do |names, element|
-      names.merge({element.name => {element.name.lchop(raw_name).rchop("_").lchop("_") => element.value.gsub(raw_name, "").rchop("_")}})
-    end
+  def flag?
+    raw_name.includes?("Flags")
   end
 end
 
 class EnumMember
-  property name : String
-  property value : String
+  property def_name : String
+  property name : String?
+  property raw_name : String
+  property value : String?
+  property raw_value : String
 
-  def initialize(@name : String, @value : String)
+  def initialize(@def_name : String, @raw_name : String, @raw_value : String)
+  end
+
+  def name
+    @name ||= raw_name.lchop(def_name).rchop("_").lchop("_")
+  end
+
+  def value
+    @value ||= raw_value.gsub(def_name, "").rchop("_")
   end
 end
 
@@ -488,14 +417,14 @@ class TypeReference
   property raw_type : String
   property name : String?
   property type : String?
-  property template_type : String?
-  property size_part : String?
   property array_size : Int32?
+  property template_type : String?
   property enums : Array(EnumDefinition)
 
   def initialize(
     @raw_name : String,
     @raw_type : String,
+    @array_size : Int32?,
     @template_type : String?,
     @enums : Array(EnumDefinition)
   )
@@ -506,7 +435,7 @@ class TypeReference
   end
 
   def type
-    @type ||= chain raw_type, remove_const, remove_underscore
+    @type ||= chain raw_type, remove_const, remove_underscore, remove_spaces
   end
 
   def remove_const(str)
@@ -517,24 +446,28 @@ class TypeReference
     str.index("ImVector_") == 0 ? (str[-1] == '*' ? "ImVector*" : "ImVector") : str
   end
 
-  def size_part
-    @size_part ||= raw_name.match(/\[(.*)\]/).try(&.[1])
+  def remove_spaces(str)
+    str.includes?("unsigned") ? str : str.gsub(/\s/, "")
   end
 
-  def array_size
-    @array_size ||= size_part.nil? ? -1 : parse_size_string(size_part.not_nil!)
-  end
+  # def size_part
+  #   @size_part ||= raw_name.match(/\[(.*)\]/).try(&.[1])
+  # end
 
-  def parse_size_string(str)
-    return str.split('+').map(&.to_i).sum if str.index('+')
-    return str.to_i if str.to_i?
-    members = [] of EnumMember
-    enums.each_with_object(members) { |ed, m| m.concat(ed.members) if str.index(ed.name) == 0 }
-    members.find { |m| m.name == str && m.value.to_i? }.try(&.value.to_i) || -1
-  end
+  # def array_size
+  #   @array_size ||= size_part.nil? ? -1 : parse_size_string(size_part.not_nil!)
+  # end
+
+  # def parse_size_string(str)
+  #   return str.split('+').map(&.to_i).sum if str.includes?('+')
+  #   return str.to_i if str.to_i?
+  #   members = [] of EnumMember
+  #   enums.each_with_object(members) { |ed, m| m.concat(ed.members) if str.index(ed.name) == 0 }
+  #   members.find { |m| m.name == str && m.value.to_i? }.try(&.value.to_i) || -1
+  # end
 
   def function_pointer?
-    !type.index('(').nil?
+    type.includes?('(')
   end
 end
 
@@ -618,57 +551,3 @@ puts "\n\n\n"
 puts "\n\n\n"
 
 gen.generate
-
-# class ImGuiIO
-#   enum ImDrawCorner
-#     TopLeft  = 1 << 0
-#     TopRight = 1 << 1
-#     BotLeft  = 1 << 2
-#     BotRight = 1 << 3
-#     Top      = TopLeft | TopRight
-#     Bot      = BotLeft | BotRight
-#     Left     = TopLeft | BotLeft
-#     Right    = TopRight | BotRight
-#     All      = 0xF
-#   end
-# end
-
-# puts gen.functions
-
-# puts nil.to_i
-
-# edef = EnumDefinition.new("Test_", [] of EnumMember)
-# puts edef.name
-
-# edef = EnumDefinition.new("Test123", [] of EnumMember)
-# puts edef.name
-
-# TypeDefinition.new("test", [] of TypeReference)
-
-# puts TypeReference.new("CustomRectIds[1+4]", "", nil, [] of EnumDefinition).size_part
-
-# arr = [] of Int32
-
-# arr.concat([1, 2, 3])
-# arr.concat([4, 5, 6])
-
-# puts arr.find { |a| a == 10 }.try(&.to_s.+("23"))
-
-# p gen.well_known_types
-
-# v1 = Vector2.new(0, 0)
-# p1 = Pair.new(0, 3.1245)
-
-# puts v1.x
-# puts p1
-
-# ptr = Pointer.malloc(5) { |i| i == 4 ? 0_u8 : ('a'.ord + i).to_u8 }
-# ptr = Pointer.malloc(5) { |i| i == 4 ? 0_0f32 : i.to_f32 * 3.14 }
-
-# used_chars = ImVector(LibC::Float).new(5, 5, Box.box(ptr))
-
-# puts used_chars[0]
-# puts used_chars[1]
-# puts used_chars[2]
-# puts used_chars[3]
-# puts used_chars[4]

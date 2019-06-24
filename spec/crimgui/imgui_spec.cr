@@ -1,7 +1,7 @@
 require "spec"
-require "../../src/crimgui/imgui"
+# require "../../src/crimgui/test"
 
-puts "here"
+# puts "here"
 
-puts(ImGui::ImDrawCornerFlags::All)
-puts ImGui::ImGuiCol::Text
+# puts(ImGui::ImDrawCornerFlags::All)
+# puts ImGui::ImGuiCol::Text

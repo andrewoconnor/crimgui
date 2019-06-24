@@ -369,7 +369,7 @@ imgui = ImGui.new(window)
 # puts imgui.mouse_cursor_loaded
 # puts imgui.io.value.fonts.value.tex_id
 
-puts LibImGui.io.value.key_map
+# puts LibImGui.io.value.key_map
 
 while window.open?
   while event = window.poll_event
