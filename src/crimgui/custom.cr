@@ -35,9 +35,10 @@ struct ImVector
   end
 end
 
-# struct Pair
-#   property key, value
+@[Extern]
+struct Pair
+  property key, value
 
-#   def initialize(@key : LibC::UInt, @value : (LibC::Int | LibC::Float | Void*))
-#   end
-# end
+  def initialize(@key : LibC::UInt, @value : Void*)
+  end
+end

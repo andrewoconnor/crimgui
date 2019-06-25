@@ -1,18 +1,18 @@
 require "crsfml"
 require "crystal-raw-gl/gl"
-require "./lib"
+require "./lib2"
 
 module OpenGL
   def draw(*args)
-    io = LibImGui.io
-    draw_data = LibImGui.draw_data
+    io = LibImGui.ig_get_io
+    draw_data = LibImGui.ig_get_draw_data
     return if draw_data.null? || draw_data.value.cmd_lists_count == 0
     raise "Uninitialized font texture" if io.value.fonts.value.tex_id.null?
     # target.reset_gl_states
     frame_buffer_width = LibC::Int.new(io.value.display_size.x * io.value.display_framebuffer_scale.x)
     frame_buffer_height = LibC::Int.new(io.value.display_size.y * io.value.display_framebuffer_scale.y)
     return if frame_buffer_width == 0 || frame_buffer_height == 0
-    LibImGui.imdrawdata_scale_clip_rects(draw_data, io.value.display_framebuffer_scale)
+    LibImGui.im_draw_data_scale_clip_rects(draw_data, io.value.display_framebuffer_scale)
 
     {% if GL.has_constant?("VERSION_ES_CL_1_1") %}
       GL.get_integerv(GL::TEXTURE_BINDING_2D, out last_texture)
@@ -132,7 +132,7 @@ module SFML
   end
 
   def initialize(@window : SF::Window, @target : SF::RenderTarget, @load_default_font : Bool)
-    @imgui_context = LibImGui.imguicontext_allocate(Pointer(LibImGui::ImFontAtlas).null)
+    @imgui_context = LibImGui.ig_create_context(Pointer(LibImGui::ImFontAtlas).null)
     # @io = Pointer(LibImGui::ImGuiIO).null
     @mouse_cursor_loaded = uninitialized Bool[LibImGui::ImGuiMouseCursor::COUNT]
     @mouse_cursors = uninitialized SF::Cursor[LibImGui::ImGuiMouseCursor::COUNT]
@@ -145,7 +145,7 @@ module SFML
   end
 
   def finalize
-    LibImGui.imguicontext_destroy(imgui_context)
+    LibImGui.ig_destroy_context(imgui_context)
   end
 
   def load_cursor(imgui_cursor, sfml_cursor)
@@ -154,8 +154,8 @@ module SFML
   end
 
   def update_font_texture
-    io = LibImGui.io
-    LibImGui.imfontatlas_get_tex_data_as_rgba32(io.value.fonts, out pixels, out width, out height, out bytes_per_pixel)
+    io = LibImGui.ig_get_io
+    LibImGui.im_font_atlas_get_tex_data_as_rgba32(io.value.fonts, out pixels, out width, out height, out bytes_per_pixel)
 
     font_texture.create(width, height)
     font_texture.update(pixels)
@@ -187,7 +187,7 @@ module SFML
   end
 
   def update(dt)
-    io = LibImGui.io
+    io = LibImGui.ig_get_io
     update_mouse_cursor
     io.value.display_size = ImVec2.new(target.size)
     io.value.delta_time = LibC::Float.new(dt)
@@ -207,7 +207,7 @@ module SFML
   end
 
   def process_event(event)
-    io = LibImGui.io
+    io = LibImGui.ig_get_io
     # return unless window.focus?
     case event
     when SF::Event::MouseMoved
@@ -225,9 +225,9 @@ module SFML
   end
 
   def update_mouse_cursor
-    io = LibImGui.io
+    io = LibImGui.ig_get_io
     return unless (io.value.config_flags.value & LibImGui::ImGuiConfigFlags::NoMouseCursorChange.value) == 0
-    cursor = LibImGui.mouse_cursor
+    cursor = LibImGui.ig_get_mouse_cursor
     if io.value.mouse_draw_cursor || cursor == LibImGui::ImGuiMouseCursor::None.value
       window.mouse_cursor_visible = false
     else
@@ -238,42 +238,42 @@ module SFML
 
   def init_io
     # init supported features
-    LibImGui.io.value.backend_platform_name = "crimgui_sfml"
-    LibImGui.io.value.backend_flags = LibImGui::ImGuiBackendFlags::HasMouseCursors | LibImGui::ImGuiBackendFlags::HasSetMousePos
+    LibImGui.ig_get_io.value.backend_platform_name = "crimgui_sfml"
+    LibImGui.ig_get_io.value.backend_flags = LibImGui::ImGuiBackendFlags::HasMouseCursors | LibImGui::ImGuiBackendFlags::HasSetMousePos
 
-    # LibImGui.io.value.config_flags = LibImGui::ImGuiConfigFlags::NavEnableKeyboard | LibImGui::ImGuiConfigFlags::NavEnableSetMousePos
+    # LibImGui.ig_get_io.value.config_flags = LibImGui::ImGuiConfigFlags::NavEnableKeyboard | LibImGui::ImGuiConfigFlags::NavEnableSetMousePos
 
     # init keyboard mapping
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::Tab.value] = SF::Keyboard::Key::Tab.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::LeftArrow.value] = SF::Keyboard::Key::Left.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::RightArrow.value] = SF::Keyboard::Key::Right.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::UpArrow.value] = SF::Keyboard::Key::Up.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::DownArrow.value] = SF::Keyboard::Key::Down.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::PageUp.value] = SF::Keyboard::Key::PageUp.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::PageDown.value] = SF::Keyboard::Key::PageDown.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::Home.value] = SF::Keyboard::Key::Home.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::End.value] = SF::Keyboard::Key::End.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::Insert.value] = SF::Keyboard::Key::Insert.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Tab.value] = SF::Keyboard::Key::Tab.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::LeftArrow.value] = SF::Keyboard::Key::Left.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::RightArrow.value] = SF::Keyboard::Key::Right.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::UpArrow.value] = SF::Keyboard::Key::Up.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::DownArrow.value] = SF::Keyboard::Key::Down.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::PageUp.value] = SF::Keyboard::Key::PageUp.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::PageDown.value] = SF::Keyboard::Key::PageDown.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Home.value] = SF::Keyboard::Key::Home.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::End.value] = SF::Keyboard::Key::End.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Insert.value] = SF::Keyboard::Key::Insert.value
     {% if flag?(:android) %}
-      LibImGui.io.value.key_map[LibImGui::ImGuiKey::Backspace.value] = SF::Keyboard::Key::Delete.value
+      LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Backspace.value] = SF::Keyboard::Key::Delete.value
     {% else %}
-      LibImGui.io.value.key_map[LibImGui::ImGuiKey::Delete.value] = SF::Keyboard::Key::Delete.value
-      LibImGui.io.value.key_map[LibImGui::ImGuiKey::Backspace.value] = SF::Keyboard::Key::Backspace.value
+      LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Delete.value] = SF::Keyboard::Key::Delete.value
+      LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Backspace.value] = SF::Keyboard::Key::Backspace.value
     {% end %}
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::Space.value] = SF::Keyboard::Key::Space.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::Enter.value] = SF::Keyboard::Key::Enter.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::Escape.value] = SF::Keyboard::Key::Escape.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::A.value] = SF::Keyboard::Key::A.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::C.value] = SF::Keyboard::Key::C.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::V.value] = SF::Keyboard::Key::V.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::X.value] = SF::Keyboard::Key::X.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::Y.value] = SF::Keyboard::Key::Y.value
-    LibImGui.io.value.key_map[LibImGui::ImGuiKey::Z.value] = SF::Keyboard::Key::Z.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Space.value] = SF::Keyboard::Key::Space.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Enter.value] = SF::Keyboard::Key::Enter.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Escape.value] = SF::Keyboard::Key::Escape.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::A.value] = SF::Keyboard::Key::A.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::C.value] = SF::Keyboard::Key::C.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::V.value] = SF::Keyboard::Key::V.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::X.value] = SF::Keyboard::Key::X.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Y.value] = SF::Keyboard::Key::Y.value
+    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Z.value] = SF::Keyboard::Key::Z.value
 
     # TODO: init joystick mapping
 
     # init rendering
-    LibImGui.io.value.display_size = ImVec2.new(target.size)
+    LibImGui.ig_get_io.value.display_size = ImVec2.new(target.size)
 
     # TODO: init clipboard
 
@@ -302,11 +302,11 @@ class ImGui
   include SFML
 
   def new_frame
-    LibImGui.new_frame
+    LibImGui.ig_new_frame
   end
 
   def end_frame
-    LibImGui.end_frame
+    LibImGui.ig_end_frame
   end
 
   def begin(
@@ -314,31 +314,31 @@ class ImGui
     p_open : Bool* = Pointer(Bool).null,
     flags : LibImGui::ImGuiWindowFlags = LibImGui::ImGuiWindowFlags::None
   )
-    LibImGui.begin(name, p_open, flags)
+    LibImGui.ig_begin(name, p_open, flags)
   end
 
   def end
-    LibImGui.end
+    LibImGui.ig_end
   end
 
   def show_demo_window(p_open : Bool* = Pointer(Bool).null)
-    LibImGui.show_demo_window(p_open)
+    LibImGui.ig_show_demo_window(p_open)
   end
 
   def show_metrics_window(p_open : Bool* = Pointer(Bool).null)
-    LibImGui.show_metrics_window(p_open)
+    LibImGui.ig_show_metrics_window(p_open)
   end
 
   def button(label : String, size : ImVec2 = ImVec2.new(0, 0))
-    LibImGui.button(label, size)
+    LibImGui.ig_button(label, size)
   end
 
   def text(fmt : String)
-    LibImGui.text(fmt)
+    LibImGui.ig_text(fmt)
   end
 
   def render
-    LibImGui.render
+    LibImGui.ig_render
   end
 end
 
@@ -369,7 +369,7 @@ imgui = ImGui.new(window)
 # puts imgui.mouse_cursor_loaded
 # puts imgui.io.value.fonts.value.tex_id
 
-# puts LibImGui.io.value.key_map
+# puts LibImGui.ig_get_io.value.key_map
 
 while window.open?
   while event = window.poll_event

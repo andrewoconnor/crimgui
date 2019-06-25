@@ -43,15 +43,8 @@ class CodeGenerator
       "ImU32"                 => "LibC::UInt",
       "ImDrawCallback"        => "Void*",
       "ImGuiContext*"         => "Void*",
-      "float[2]"              => "LibC::Float*",
-      "float[3]"              => "LibC::Float*",
-      "float[4]"              => "LibC::Float*",
-      "int[2]"                => "LibC::Int*",
-      "int[3]"                => "LibC::Int*",
-      "int[4]"                => "LibC::Int*",
       "float&"                => "LibC::Float*",
-      # "ImVec2[2]"             => "Vector2*",
-      "char* []" => "LibC::Char**",
+      # "char* []" => "LibC::Char**",
     }
   end
 
@@ -126,7 +119,7 @@ class CodeGenerator
           next if non_udt_variants && !exported_name.ends_with?("nonUDT2")
           underscore_pos = exported_name.index('_')
           fix_function_name = !underscore_pos.nil? && underscore_pos > 0 && !exported_name.starts_with?("ig")
-          self_type_name = exported_name[0...underscore_pos.not_nil!] if fix_function_name
+          # self_type_name = exported_name[0...underscore_pos.not_nil!] if fix_function_name
           parameters = overload["argsT"].as(Array(Hash(String, String))).map { |arg|
             TypeReference.new(
               arg["name"].to_s,
@@ -162,54 +155,9 @@ class CodeGenerator
     }.as(Array(FunctionDefinition))
   end
 
-  # def generate_functions(type_def)
-  #   function_definitions.each do |fd|
-  #     fd.overloads.each do |overload|
-  #       next if overload.struct_name != type_def.name
-  #       # next if overload.constructor?
-  #       exported_name = overload.raw_name.sub("ig", "")
-  #       next if exported_name.includes?('~')
-  #       next if overload.params.any?(&.function_pointer?)
-  #       has_va_list = false
-  #       overload.params.each do |param|
-  #         next if param.name == "..."
-  #         param_type = type_string(param.type, param.function_pointer?)
-  #         if param_type == "va_list"
-  #           has_va_list = true
-  #           break
-  #         end
-  #       end
-  #       next if has_va_list
-
-  #       ordered_defaults = overload.default_values.reduce({} of Int32 => Hash(String, String)) do |res, (k, v)|
-  #         pos = overload.params.index { |param| param.name == k }.not_nil!
-  #         res[pos] = {k => v}
-  #         res
-  #       end
-
-  #       method_name = overload.constructor? ? "allocate" : overload.name.underscore
-  #       func_sig = "fun #{type_def.name.downcase}_#{method_name} = #{overload.function_name}("
-
-  #       func_sig = func_sig + overload.params.reduce([] of String) { |params, param|
-  #         params.tap { |p| p << "#{param.name} : #{type_string(param.type, param.function_pointer?)}" unless param.name == "..." }
-  #       }.join(", ")
-  #       func_sig = func_sig + ")"
-  #       func_sig = func_sig + " : #{overload.struct_name}*" if overload.constructor?
-  #       func_sig = func_sig + " : #{type_string(overload.return_type, false)}" unless overload.return_type.nil? || overload.return_type == "void"
-
-  #       code_writer.write(func_sig)
-  #       # puts "#{type_def.name}.#{overload.name}"
-  #       # puts ordered_defaults
-  #     end
-  #   end
-  #   code_writer.write("")
-  # end
-
   def generate_functions
     function_definitions.each do |fd|
       fd.overloads.each do |overload|
-        # next if overload.struct_name != type_def.name
-        # next if overload.constructor?
         exported_name = overload.raw_name.sub("ig", "")
         next if exported_name.includes?('~')
         next if exported_name.ends_with?("_const")
@@ -225,24 +173,13 @@ class CodeGenerator
         end
         next if has_va_list
 
-        ordered_defaults = overload.default_values.reduce({} of Int32 => Hash(String, String)) do |res, (k, v)|
-          pos = overload.params.index { |param| param.name == k }.not_nil!
-          res[pos] = {k => v}
-          res
-        end
-
-        # method_name = overload.constructor? ? "allocate" : overload.name.underscore
-        method_name = overload.struct_name.underscore
-        # puts method_name
-        method_name += '_' unless method_name.empty?
-        method_name += overload.name.underscore
-        func_sig = "fun #{method_name} = #{overload.function_name}("
+        func_sig = "fun #{overload.raw_name.underscore} = #{overload.function_name}("
 
         func_sig = func_sig + overload.params.reduce([] of String) { |params, param|
           params.tap { |p| p << "#{param.name} : #{type_string(param.type, param.function_pointer?)}" unless param.name == "..." }
         }.join(", ")
         func_sig = func_sig + ")"
-        func_sig = func_sig + " : #{overload.struct_name}*" if overload.constructor?
+        # func_sig = func_sig + " : #{overload.struct_name}*" if overload.constructor?
         func_sig = func_sig + " : #{type_string(overload.return_type, false)}" unless overload.return_type.nil? || overload.return_type == "void"
 
         code_writer.write(func_sig)
@@ -263,10 +200,11 @@ class CodeGenerator
     code_writer.write("")
     code_writer.write("@[Link(\"cimgui\")]")
     code_writer.begin_block("lib LibImGui")
+    code_writer.write("# aliases")
+    generate_aliases
+    code_writer.write("")
     code_writer.write("# enums")
     generate_enums
-    code_writer.write("alias ImDrawIdx = LibC::UShort")
-    code_writer.write("")
     code_writer.write("# types")
     generate_types
     code_writer.write("")
@@ -302,12 +240,12 @@ class CodeGenerator
       end
       code_writer.end_block
       code_writer.write("")
-
-      # generate_functions(type_def)
     end
   end
 
   def type_string(type_name, is_function_pointer)
+    array_size = type_name.match(/\[(\d+)\]/).try &.[1]
+    type_name = type_name.split('[').first
     type_str = nil
     ptr_level = 0
     while type_name[-1 * ptr_level - 1] == '*'
@@ -316,11 +254,13 @@ class CodeGenerator
     type_str ||= well_known_types[type_name]?
     type_str ||= well_known_types[type_name[0...-ptr_level]]? if ptr_level > 0
     type_str = type_str.not_nil! + "*" * ptr_level if type_str && ptr_level > 0
-    type_str ||= type_str.nil? && is_function_pointer ? "Void*" : type_name
+    type_str ||= type_str.nil? && is_function_pointer ? "Void*" : type_name.rchop('&')
+    type_str += "[#{array_size}]" if array_size
     type_str
   end
 
-  def emit_overload(default_values, self_name)
+  def generate_aliases
+    code_writer.write("alias ImDrawIdx = LibC::UShort")
   end
 end
 
@@ -435,11 +375,11 @@ class TypeReference
   end
 
   def type
-    @type ||= chain raw_type, remove_const, remove_underscore, remove_spaces
+    @type ||= chain raw_type, remove_const, remove_underscore, remove_spaces, remove_empty_brackets
   end
 
   def remove_const(str)
-    str.sub("const", "").strip
+    str.gsub("const", "").strip
   end
 
   def remove_underscore(str)
@@ -450,21 +390,9 @@ class TypeReference
     str.includes?("unsigned") ? str : str.gsub(/\s/, "")
   end
 
-  # def size_part
-  #   @size_part ||= raw_name.match(/\[(.*)\]/).try(&.[1])
-  # end
-
-  # def array_size
-  #   @array_size ||= size_part.nil? ? -1 : parse_size_string(size_part.not_nil!)
-  # end
-
-  # def parse_size_string(str)
-  #   return str.split('+').map(&.to_i).sum if str.includes?('+')
-  #   return str.to_i if str.to_i?
-  #   members = [] of EnumMember
-  #   enums.each_with_object(members) { |ed, m| m.concat(ed.members) if str.index(ed.name) == 0 }
-  #   members.find { |m| m.name == str && m.value.to_i? }.try(&.value.to_i) || -1
-  # end
+  def remove_empty_brackets(str)
+    str.gsub(/\[\]/, "*")
+  end
 
   def function_pointer?
     type.includes?('(')
@@ -484,7 +412,8 @@ class OverloadDefinition
   property function_name : String
   property params : Array(TypeReference)
   property default_values : Hash(String, String)
-  property return_type : String
+  property raw_return_type : String
+  property return_type : String?
   property struct_name : String
   property comment : String
   property is_constructor : Bool
@@ -496,13 +425,32 @@ class OverloadDefinition
     @function_name : String,
     @params : Array(TypeReference),
     @default_values : Hash(String, String),
-    return_type : String,
+    @raw_return_type : String,
     @struct_name : String,
     @comment : String,
     @is_constructor : Bool,
     @is_destructor : Bool
   )
-    @return_type = return_type.sub("const", "").sub("inline", "").strip
+  end
+
+  def return_type
+    @return_type ||= if constructor?
+                       remove_vector_type(struct_name) + "*"
+                     else
+                       chain(raw_return_type, remove_const, remove_inline).strip
+                     end
+  end
+
+  def remove_const(str)
+    str.sub("const", "")
+  end
+
+  def remove_inline(str)
+    str.sub("inline", "")
+  end
+
+  def remove_vector_type(str)
+    str.includes?("ImVector_") ? "ImVector" : str
   end
 
   def member_function?
@@ -538,16 +486,5 @@ class MarshalledParameter
 end
 
 gen = CodeGenerator.new
-# p gen.types_json
-
-puts "\n\n\n"
-
-# puts gen.enums
-
-puts "\n\n\n"
-
-# puts gen.types
-
-puts "\n\n\n"
 
 gen.generate
