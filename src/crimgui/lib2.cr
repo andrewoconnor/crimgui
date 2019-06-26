@@ -1506,7 +1506,7 @@ lib LibImGui
   fun ig_get_columns_count = igGetColumnsCount : LibC::Int
   fun ig_get_content_region_avail_non_udt2 = igGetContentRegionAvail_nonUDT2 : ImVec2
   fun ig_get_content_region_max_non_udt2 = igGetContentRegionMax_nonUDT2 : ImVec2
-  fun ig_get_current_context = igGetCurrentContext : Void**
+  fun ig_get_current_context = igGetCurrentContext : Void*
   fun ig_get_cursor_pos_non_udt2 = igGetCursorPos_nonUDT2 : ImVec2
   fun ig_get_cursor_pos_x = igGetCursorPosX : LibC::Float
   fun ig_get_cursor_pos_y = igGetCursorPosY : LibC::Float
@@ -1666,7 +1666,7 @@ lib LibImGui
   fun ig_set_color_edit_options = igSetColorEditOptions(flags : ImGuiColorEditFlags)
   fun ig_set_column_offset = igSetColumnOffset(column_index : LibC::Int, offset_x : LibC::Float)
   fun ig_set_column_width = igSetColumnWidth(column_index : LibC::Int, width : LibC::Float)
-  fun ig_set_current_context = igSetCurrentContext(ctx : Void**)
+  fun ig_set_current_context = igSetCurrentContext(ctx : Void*)
   fun ig_set_cursor_pos = igSetCursorPos(local_pos : ImVec2)
   fun ig_set_cursor_pos_x = igSetCursorPosX(local_x : LibC::Float)
   fun ig_set_cursor_pos_y = igSetCursorPosY(local_y : LibC::Float)

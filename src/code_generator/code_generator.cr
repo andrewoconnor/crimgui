@@ -15,36 +15,39 @@ class CodeGenerator
 
   def well_known_types
     @well_known_types ||= {
-      "bool"                  => "Bool",
-      "char"                  => "LibC::Char",
-      "double"                => "LibC::Double",
-      "float"                 => "LibC::Float",
-      "int"                   => "LibC::Int",
-      "long"                  => "LibC::Long",
-      "short"                 => "LibC::Short",
-      "size_t"                => "LibC::SizeT",
-      "void"                  => "Void",
-      "unsigned char"         => "LibC::UChar",
-      "unsigned int"          => "LibC::UInt",
-      "unsigned long"         => "LibC::ULong",
-      "unsigned short"        => "LibC::UShort",
-      "ImWchar"               => "LibC::UShort",
-      "ImVec2"                => "ImVec2",
-      "ImVec2_Simple"         => "ImVec2",
-      "ImVec3"                => "Vector3",
-      "ImVec4"                => "ImVec4",
-      "ImVec4_Simple"         => "ImVec4",
-      "ImColor_Simple"        => "ImColor",
-      "ImTextureID"           => "Void*",
-      "ImGuiID"               => "LibC::UInt",
-      "ImDrawIdx"             => "LibC::UShort",
-      "ImDrawListSharedData"  => "Void*",
-      "ImDrawListSharedData*" => "Void*",
-      "ImU32"                 => "LibC::UInt",
-      "ImDrawCallback"        => "Void*",
-      "ImGuiContext*"         => "Void*",
-      "float&"                => "LibC::Float*",
-      # "char* []" => "LibC::Char**",
+      "bool"                   => "Bool",
+      "char"                   => "LibC::Char",
+      "double"                 => "LibC::Double",
+      "float"                  => "LibC::Float",
+      "int"                    => "LibC::Int",
+      "long"                   => "LibC::Long",
+      "short"                  => "LibC::Short",
+      "size_t"                 => "LibC::SizeT",
+      "void"                   => "Void",
+      "unsigned char"          => "LibC::UChar",
+      "unsigned int"           => "LibC::UInt",
+      "unsigned long"          => "LibC::ULong",
+      "unsigned short"         => "LibC::UShort",
+      "ImWchar"                => "LibC::UShort",
+      "ImVec2"                 => "ImVec2",
+      "ImVec2_Simple"          => "ImVec2",
+      "ImVec3"                 => "Vector3",
+      "ImVec4"                 => "ImVec4",
+      "ImVec4_Simple"          => "ImVec4",
+      "ImColor_Simple"         => "ImColor",
+      "ImTextureID"            => "Void*",
+      "ImGuiID"                => "LibC::UInt",
+      "ImDrawIdx"              => "LibC::UShort",
+      "ImDrawListSharedData"   => "Void*",
+      "ImDrawListSharedData*"  => "Void*",
+      "ImU32"                  => "LibC::UInt",
+      "ImDrawCallback"         => "Void*",
+      "ImGuiInputTextCallback" => "Void*",
+      "ImGuiSizeCallback"      => "Void*",
+      "ImGuiContext*"          => "Void",
+      "float&"                 => "LibC::Float*",
+      "T"                      => "Void*",
+      "T*"                     => "Void", # "char* []" => "LibC::Char**",
     }
   end
 
@@ -118,7 +121,7 @@ class CodeGenerator
           exported_name = cimguiname if exported_name.empty?
           next if non_udt_variants && !exported_name.ends_with?("nonUDT2")
           underscore_pos = exported_name.index('_')
-          fix_function_name = !underscore_pos.nil? && underscore_pos > 0 && !exported_name.starts_with?("ig")
+          fix_function_name = underscore_pos.not_nil! > 0 && !exported_name.starts_with?("ig") if underscore_pos
           # self_type_name = exported_name[0...underscore_pos.not_nil!] if fix_function_name
           parameters = overload["argsT"].as(Array(Hash(String, String))).map { |arg|
             TypeReference.new(
@@ -435,7 +438,7 @@ class OverloadDefinition
 
   def return_type
     @return_type ||= if constructor?
-                       remove_vector_type(struct_name) + "*"
+                       chain(struct_name, remove_vector_type, add_ptr)
                      else
                        chain(raw_return_type, remove_const, remove_inline).strip
                      end
@@ -451,6 +454,10 @@ class OverloadDefinition
 
   def remove_vector_type(str)
     str.includes?("ImVector_") ? "ImVector" : str
+  end
+
+  def add_ptr(str)
+    str.ends_with?('*') ? str : str + '*'
   end
 
   def member_function?

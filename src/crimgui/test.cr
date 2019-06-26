@@ -204,6 +204,14 @@ module SFML
     end
 
     window.mouse_cursor_visible = false if io.value.mouse_draw_cursor
+
+    io.value.keys_down.each_with_index do |_, idx|
+      io.value.keys_down[idx] = false
+      if idx < SF::Keyboard::Key::KeyCount.value
+        key = SF::Keyboard::Key.new(idx)
+        io.value.keys_down[idx] = SF::Keyboard.key_pressed?(key)
+      end
+    end
   end
 
   def process_event(event)
@@ -215,8 +223,8 @@ module SFML
     when SF::Event::MouseButtonPressed
     when SF::Event::MouseButtonReleased
       mouse_btn_pressed[event.button.value] = true if (0..2).includes?(event.button.value)
-    when SF::Event::KeyReleased
-      io.value.keys_down[event.code.value] = true
+    when SF::Event::TextEntered
+      LibImGui.im_gui_io_add_input_characters_utf8(io, event.unicode.unsafe_chr.to_s) if event.unicode != 127
     when SF::Event::LostFocus
       @window_has_focus = false
     when SF::Event::GainedFocus
