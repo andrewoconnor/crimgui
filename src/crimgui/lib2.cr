@@ -600,8 +600,8 @@ lib LibImGui
     backend_platform_user_data : Void*
     backend_renderer_user_data : Void*
     backend_language_user_data : Void*
-    get_clipboard_text_fn : Void*
-    set_clipboard_text_fn : Void*
+    get_clipboard_text_fn : Void* -> LibC::Char*
+    set_clipboard_text_fn : (Void*, LibC::Char* ->)
     clipboard_user_data : Void*
     ime_set_input_screen_pos_fn : Void*
     ime_window_handle : Void*

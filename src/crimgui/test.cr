@@ -207,11 +207,16 @@ module SFML
 
     io.value.keys_down.each_with_index do |_, idx|
       io.value.keys_down[idx] = false
-      if idx < SF::Keyboard::Key::KeyCount.value
+      if idx < SF::Keyboard::Key::KeyCount.value && idx != SF::Keyboard::Key::Enter.value
         key = SF::Keyboard::Key.new(idx)
         io.value.keys_down[idx] = SF::Keyboard.key_pressed?(key)
       end
     end
+
+    io.value.key_ctrl = io.value.keys_down[SF::Keyboard::Key::LControl.value] || io.value.keys_down[SF::Keyboard::Key::RControl.value]
+    io.value.key_shift = io.value.keys_down[SF::Keyboard::Key::LAlt.value] || io.value.keys_down[SF::Keyboard::Key::RAlt.value]
+    io.value.key_alt = io.value.keys_down[SF::Keyboard::Key::LShift.value] || io.value.keys_down[SF::Keyboard::Key::RShift.value]
+    io.value.key_super = io.value.keys_down[SF::Keyboard::Key::LSystem.value] || io.value.keys_down[SF::Keyboard::Key::RSystem.value]
   end
 
   def process_event(event)
@@ -224,7 +229,7 @@ module SFML
     when SF::Event::MouseButtonReleased
       mouse_btn_pressed[event.button.value] = true if (0..2).includes?(event.button.value)
     when SF::Event::TextEntered
-      LibImGui.im_gui_io_add_input_characters_utf8(io, event.unicode.unsafe_chr.to_s) if event.unicode != 127
+      LibImGui.im_gui_io_add_input_characters_utf8(io, event.unicode.unsafe_chr.to_s) unless [58, 127].includes?(event.unicode)
     when SF::Event::LostFocus
       @window_has_focus = false
     when SF::Event::GainedFocus
@@ -242,6 +247,14 @@ module SFML
       window.mouse_cursor_visible = true
       window.mouse_cursor = mouse_cursor_loaded[cursor.value] ? mouse_cursors[cursor.value] : mouse_cursors[LibImGui::ImGuiMouseCursor::Arrow.value]
     end
+  end
+
+  def set_clipboard_text
+    ->(user_data : Void*, text : LibC::Char*) { SF::Clipboard.string = String.new(text) }
+  end
+
+  def get_clipboard_text
+    ->(user_data : Void*) { SF::Clipboard.string.to_unsafe }
   end
 
   def init_io
@@ -283,7 +296,9 @@ module SFML
     # init rendering
     LibImGui.ig_get_io.value.display_size = ImVec2.new(target.size)
 
-    # TODO: init clipboard
+    # init clipboard
+    LibImGui.ig_get_io.value.set_clipboard_text_fn = set_clipboard_text
+    LibImGui.ig_get_io.value.get_clipboard_text_fn = get_clipboard_text
 
     # init cursors
     (0...LibImGui::ImGuiMouseCursor::COUNT.value).each do |i|
