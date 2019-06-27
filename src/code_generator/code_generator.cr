@@ -41,7 +41,7 @@ class CodeGenerator
       "ImDrawListSharedData"   => "Void*",
       "ImDrawListSharedData*"  => "Void*",
       "ImU32"                  => "LibC::UInt",
-      "ImDrawCallback"         => "Void*",
+      "ImDrawCallback"         => "(ImDrawList*, ImDrawCmd* ->)",
       "ImGuiInputTextCallback" => "Void*",
       "ImGuiSizeCallback"      => "Void*",
       "ImGuiContext*"          => "Void",

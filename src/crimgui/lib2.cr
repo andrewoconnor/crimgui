@@ -451,7 +451,7 @@ lib LibImGui
     texture_id : Void*
     vtx_offset : LibC::UInt
     idx_offset : LibC::UInt
-    user_callback : Void*
+    user_callback : (ImDrawList*, ImDrawCmd* ->)
     user_callback_data : Void*
   end
 

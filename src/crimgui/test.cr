@@ -81,7 +81,7 @@ module OpenGL
       (0...cmd_list.value.cmd_buffer.size).each do |cmd_idx|
         pcmd = cmd_list.value.cmd_buffer.data.as(LibImGui::ImDrawCmd*) + cmd_idx
 
-        if pcmd.value.user_callback.null?
+        if pcmd.value.user_callback_data.null?
           GL.bind_texture(GL::TEXTURE_2D, pcmd.value.texture_id.as(GL::Uint*).value)
           GL.scissor(
             GL::Int.new(pcmd.value.clip_rect.x),
@@ -91,7 +91,7 @@ module OpenGL
           )
           GL.draw_elements(GL::TRIANGLES, GL::Sizei.new(pcmd.value.elem_count), GL::UNSIGNED_SHORT, idx_buffer)
         else
-          # TODO handle callback
+          pcmd.value.user_callback.call(cmd_list, pcmd)
         end
 
         idx_buffer = idx_buffer + pcmd.value.elem_count
@@ -228,6 +228,13 @@ module SFML
     when SF::Event::MouseButtonPressed
     when SF::Event::MouseButtonReleased
       mouse_btn_pressed[event.button.value] = true if (0..2).includes?(event.button.value)
+    when SF::Event::MouseWheelScrolled
+      puts event.delta
+      # TODO: set scroll position for active window
+      # BeginChild(GetId(my_input_text_label))
+      # SetScrollHere();
+      # EndChild();
+      # LibImGui.ig_set_scroll_y(LibC::Float.new(-1.0) * LibC::Float.new(event.delta))
     when SF::Event::TextEntered
       LibImGui.im_gui_io_add_input_characters_utf8(io, event.unicode.unsafe_chr.to_s) unless [58, 127].includes?(event.unicode)
     when SF::Event::LostFocus
@@ -257,48 +264,55 @@ module SFML
     ->(user_data : Void*) { SF::Clipboard.string.to_unsafe }
   end
 
-  def init_io
-    # init supported features
-    LibImGui.ig_get_io.value.backend_platform_name = "crimgui_sfml"
-    LibImGui.ig_get_io.value.backend_flags = LibImGui::ImGuiBackendFlags::HasMouseCursors | LibImGui::ImGuiBackendFlags::HasSetMousePos
+  macro map_key(io, imgui_key, sfml_key = nil)
+    {% imgui_enum = "LibImGui::ImGuiKey::" + imgui_key %}
+    {% sfml_enum = "SF::Keyboard::Key::" + (sfml_key || imgui_key) %}
+    io.value.key_map[{{imgui_enum.id}}.value] = {{sfml_enum.id}}.value
+  end
 
-    # LibImGui.ig_get_io.value.config_flags = LibImGui::ImGuiConfigFlags::NavEnableKeyboard | LibImGui::ImGuiConfigFlags::NavEnableSetMousePos
+  def init_io
+    io = LibImGui.ig_get_io
+    # init supported features
+    io.value.backend_platform_name = "crimgui_sfml"
+    io.value.backend_flags = LibImGui::ImGuiBackendFlags::HasMouseCursors | LibImGui::ImGuiBackendFlags::HasSetMousePos
+
+    # io.value.config_flags = LibImGui::ImGuiConfigFlags::NavEnableKeyboard | LibImGui::ImGuiConfigFlags::NavEnableSetMousePos
 
     # init keyboard mapping
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Tab.value] = SF::Keyboard::Key::Tab.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::LeftArrow.value] = SF::Keyboard::Key::Left.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::RightArrow.value] = SF::Keyboard::Key::Right.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::UpArrow.value] = SF::Keyboard::Key::Up.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::DownArrow.value] = SF::Keyboard::Key::Down.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::PageUp.value] = SF::Keyboard::Key::PageUp.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::PageDown.value] = SF::Keyboard::Key::PageDown.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Home.value] = SF::Keyboard::Key::Home.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::End.value] = SF::Keyboard::Key::End.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Insert.value] = SF::Keyboard::Key::Insert.value
+    map_key(io, "Tab")
+    map_key(io, "LeftArrow", "Left")
+    map_key(io, "RightArrow", "Right")
+    map_key(io, "UpArrow", "Up")
+    map_key(io, "DownArrow", "Down")
+    map_key(io, "PageUp")
+    map_key(io, "PageDown")
+    map_key(io, "Home")
+    map_key(io, "End")
+    map_key(io, "Insert")
     {% if flag?(:android) %}
-      LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Backspace.value] = SF::Keyboard::Key::Delete.value
+      map_key(io, "Backspace", "Delete")
     {% else %}
-      LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Delete.value] = SF::Keyboard::Key::Delete.value
-      LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Backspace.value] = SF::Keyboard::Key::Backspace.value
+      map_key(io, "Delete")
+      map_key(io, "Backspace")
     {% end %}
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Space.value] = SF::Keyboard::Key::Space.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Enter.value] = SF::Keyboard::Key::Enter.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Escape.value] = SF::Keyboard::Key::Escape.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::A.value] = SF::Keyboard::Key::A.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::C.value] = SF::Keyboard::Key::C.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::V.value] = SF::Keyboard::Key::V.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::X.value] = SF::Keyboard::Key::X.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Y.value] = SF::Keyboard::Key::Y.value
-    LibImGui.ig_get_io.value.key_map[LibImGui::ImGuiKey::Z.value] = SF::Keyboard::Key::Z.value
+    map_key(io, "Space")
+    map_key(io, "Enter")
+    map_key(io, "Escape")
+    map_key(io, "A")
+    map_key(io, "C")
+    map_key(io, "V")
+    map_key(io, "X")
+    map_key(io, "Y")
+    map_key(io, "Z")
 
     # TODO: init joystick mapping
 
     # init rendering
-    LibImGui.ig_get_io.value.display_size = ImVec2.new(target.size)
+    io.value.display_size = ImVec2.new(target.size)
 
     # init clipboard
-    LibImGui.ig_get_io.value.set_clipboard_text_fn = set_clipboard_text
-    LibImGui.ig_get_io.value.get_clipboard_text_fn = get_clipboard_text
+    io.value.set_clipboard_text_fn = set_clipboard_text
+    io.value.get_clipboard_text_fn = get_clipboard_text
 
     # init cursors
     (0...LibImGui::ImGuiMouseCursor::COUNT.value).each do |i|
@@ -375,6 +389,7 @@ window = SF::RenderWindow
 
 rectangle = SF::RectangleShape.new
 rectangle.size = SF.vector2f(44, 34)
+rectangle.fill_color = SF::Color::Black
 rectangle.outline_color = SF::Color::Red
 rectangle.outline_thickness = 5
 rectangle.position = {64, 79}
@@ -427,6 +442,7 @@ while window.open?
 
   window.clear
   imgui.render
+  window.draw(rectangle)
   window.draw(imgui)
   window.display
 end
