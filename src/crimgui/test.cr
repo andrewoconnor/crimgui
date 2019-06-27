@@ -148,9 +148,11 @@ module SFML
     LibImGui.ig_destroy_context(imgui_context)
   end
 
-  def load_cursor(imgui_cursor, sfml_cursor)
-    mouse_cursors[imgui_cursor.value] = SF::Cursor.new
-    mouse_cursor_loaded[imgui_cursor.value] = mouse_cursors[imgui_cursor.value].load_from_system(sfml_cursor)
+  macro load_cursor(imgui_cursor, sfml_cursor = nil)
+    {% imgui_enum = "LibImGui::ImGuiMouseCursor::" + imgui_cursor %}
+    {% sfml_enum = "SF::Cursor::" + (sfml_cursor || imgui_cursor) %}
+    mouse_cursors[{{imgui_enum.id}}.value] = SF::Cursor.new
+    mouse_cursor_loaded[{{imgui_enum.id}}.value] = mouse_cursors[{{imgui_enum.id}}.value].load_from_system({{sfml_enum.id}})
   end
 
   def update_font_texture
@@ -319,14 +321,14 @@ module SFML
       mouse_cursor_loaded[i] = false
     end
 
-    load_cursor(LibImGui::ImGuiMouseCursor::Arrow, SF::Cursor::Arrow)
-    load_cursor(LibImGui::ImGuiMouseCursor::TextInput, SF::Cursor::Text)
-    load_cursor(LibImGui::ImGuiMouseCursor::ResizeAll, SF::Cursor::SizeAll)
-    load_cursor(LibImGui::ImGuiMouseCursor::ResizeNS, SF::Cursor::SizeVertical)
-    load_cursor(LibImGui::ImGuiMouseCursor::ResizeEW, SF::Cursor::SizeHorizontal)
-    load_cursor(LibImGui::ImGuiMouseCursor::ResizeNESW, SF::Cursor::SizeBottomLeftTopRight)
-    load_cursor(LibImGui::ImGuiMouseCursor::ResizeNWSE, SF::Cursor::SizeTopLeftBottomRight)
-    load_cursor(LibImGui::ImGuiMouseCursor::Hand, SF::Cursor::Hand)
+    load_cursor("Arrow")
+    load_cursor("TextInput", "Text")
+    load_cursor("ResizeAll", "SizeAll")
+    load_cursor("ResizeNS", "SizeVertical")
+    load_cursor("ResizeEW", "SizeHorizontal")
+    load_cursor("ResizeNESW", "SizeBottomLeftTopRight")
+    load_cursor("ResizeNWSE", "SizeTopLeftBottomRight")
+    load_cursor("Hand")
 
     update_font_texture if load_default_font
 
