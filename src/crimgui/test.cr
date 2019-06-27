@@ -231,12 +231,7 @@ module SFML
     when SF::Event::MouseButtonReleased
       mouse_btn_pressed[event.button.value] = true if (0..2).includes?(event.button.value)
     when SF::Event::MouseWheelScrolled
-      puts event.delta
-      # TODO: set scroll position for active window
-      # BeginChild(GetId(my_input_text_label))
-      # SetScrollHere();
-      # EndChild();
-      # LibImGui.ig_set_scroll_y(LibC::Float.new(-1.0) * LibC::Float.new(event.delta))
+      io.value.mouse_wheel = event.delta if event.delta.abs > 0.5
     when SF::Event::TextEntered
       LibImGui.im_gui_io_add_input_characters_utf8(io, event.unicode.unsafe_chr.to_s) unless [58, 127].includes?(event.unicode)
     when SF::Event::LostFocus
