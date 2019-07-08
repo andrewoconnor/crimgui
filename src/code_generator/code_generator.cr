@@ -264,6 +264,7 @@ class CodeGenerator
 
   def generate_aliases
     code_writer.write("alias ImDrawIdx = LibC::UShort")
+    code_writer.write("alias ImWchar = LibC::UShort")
   end
 end
 
