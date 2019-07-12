@@ -134,7 +134,7 @@ module SFML
   def initialize(@window : SF::Window, @target : SF::RenderTarget, @load_default_font : Bool)
     @imgui_context = LibImGui.ig_create_context(Pointer(LibImGui::ImFontAtlas).null)
     # @io = Pointer(LibImGui::ImGuiIO).null
-    @mouse_cursor_loaded = uninitialized Bool[LibImGui::ImGuiMouseCursor::COUNT]
+    @mouse_cursor_loaded = StaticArray(Bool, LibImGui::ImGuiMouseCursor::COUNT).new(false)
     @mouse_cursors = uninitialized SF::Cursor[LibImGui::ImGuiMouseCursor::COUNT]
     @font_texture = SF::Texture.new
     @font_texture_handle = LibC::UInt.new(font_texture.native_handle)
