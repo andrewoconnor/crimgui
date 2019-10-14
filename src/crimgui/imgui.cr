@@ -506,6 +506,14 @@ class ImGui
     LibImGui.ig_next_column
   end
 
+  def checkbox(label : String, v : Bool*)
+    LibImGui.ig_checkbox(label, v)
+  end
+
+  def combo(label : String, current_item : LibC::Int*, items : Array(String), popup_max_height_in_items : Int32 = 3)
+    LibImGui.ig_combo(label, current_item, items.map(&.to_unsafe), items.size, popup_max_height_in_items)
+  end
+
   def input_float(
     label : String,
     v : LibC::Float*,
