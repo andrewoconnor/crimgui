@@ -35,7 +35,7 @@ class CodeGenerator
       "ImVec4"                 => "ImVec4",
       "ImVec4_Simple"          => "ImVec4",
       "ImColor_Simple"         => "ImColor",
-      "ImTextureID"            => "Void*",
+      "ImTextureID"            => "LibC::UInt",
       "ImGuiID"                => "LibC::UInt",
       "ImDrawIdx"              => "LibC::UShort",
       "ImDrawListSharedData"   => "Void*",

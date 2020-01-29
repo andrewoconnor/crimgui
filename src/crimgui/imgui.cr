@@ -124,7 +124,10 @@ module SFML
   property mouse_cursor_loaded : Bool[LibImGui::ImGuiMouseCursor::COUNT]
   property mouse_cursors : SF::Cursor[LibImGui::ImGuiMouseCursor::COUNT]
   property font_texture : SF::Texture
-  property font_texture_handle : LibC::UInt
+  property font_texture_handle : GL::Uint
+  property textures : Hash(Int32, Array(GL::Uint))
+  property animations : Hash(Int32, Array(Int32))
+
   property io : LibImGui::ImGuiIO*?
 
   def initialize(window : SF::RenderWindow, load_default_font : Bool = true)
@@ -137,7 +140,9 @@ module SFML
     @mouse_cursor_loaded = StaticArray(Bool, LibImGui::ImGuiMouseCursor::COUNT).new(false)
     @mouse_cursors = uninitialized SF::Cursor[LibImGui::ImGuiMouseCursor::COUNT]
     @font_texture = SF::Texture.new
-    @font_texture_handle = LibC::UInt.new(font_texture.native_handle)
+    @font_texture_handle = GL::Uint.new(font_texture.native_handle)
+    @textures = {} of Int32 => Array(GL::Uint)
+    @animations = {} of Int32 => Array(Int32)
     @window_has_focus = false
     @mouse_moved = false
     @mouse_btn_pressed = StaticArray(Bool, 5).new(false)
@@ -162,7 +167,7 @@ module SFML
     font_texture.create(width, height)
     font_texture.update(pixels)
 
-    @font_texture_handle = LibC::UInt.new(font_texture.native_handle)
+    @font_texture_handle = GL::Uint.new(font_texture.native_handle)
 
     io.value.fonts.value.tex_id = pointerof(@font_texture_handle).as(Void*)
   end
@@ -180,6 +185,7 @@ module SFML
   end
 
   def draw(target : SF::RenderTarget, states : SF::RenderStates)
+    target.reset_gl_states
     super
   end
 
@@ -329,6 +335,72 @@ module SFML
 
     @window_has_focus = window.focus?
   end
+
+  def draw_line(a : SF::Vector2, b : SF::Vector2, color : SF::Color, thickness : Float32)
+    draw_list = LibImGui.ig_get_window_draw_list
+    pos = screen_cursor_pos
+    a = ImVec2.new(a.x + pos.x, a.y + pos.y)
+    b = ImVec2.new(b.x + pos.x, b.y + pos.y)
+    LibImGui.im_draw_list_add_line(draw_list, a, b, 0xffffffff, thickness)
+  end
+
+  def draw_animation(animation : Animation)
+    @animations[animation.id] = [1] unless animations.has_key?(animation.id)
+    frame = @animations[animation.id][0] - 1
+    ratio = 1.0 / animation.num_frames
+    uv_a = ImVec2.new(ratio * frame, 0.0)
+    uv_b = ImVec2.new(ratio * frame + ratio, 0.0)
+    uv_c = ImVec2.new(ratio * frame + ratio, 1.0)
+    uv_d = ImVec2.new(ratio * frame, 1.0)
+    if slider_int("slider_int1", @animations[animation.id].to_unsafe, 1, animation.num_frames)
+      frame = @animations[animation.id][0] - 1
+      uv_a = ImVec2.new(ratio * frame, 0.0)
+      uv_b = ImVec2.new(ratio * frame + ratio, 0.0)
+      uv_c = ImVec2.new(ratio * frame + ratio, 1.0)
+      uv_d = ImVec2.new(ratio * frame, 1.0)
+    end
+    draw_texture(animation.texture, animation.texture_size, uv_a, uv_b, uv_c, uv_d)
+  end
+
+  def draw_texture(
+    texture : SF::Texture,
+    texture_size : SF::Vector2i = texture.size,
+    uv_a : ImVec2 = ImVec2.new(0.0, 0.0),
+    uv_b : ImVec2 = ImVec2.new(1.0, 0.0),
+    uv_c : ImVec2 = ImVec2.new(1.0, 1.0),
+    uv_d : ImVec2 = ImVec2.new(0.0, 1.0)
+  )
+    draw_list = LibImGui.ig_get_window_draw_list
+    pos = screen_cursor_pos
+
+    @textures[texture.native_handle] = [GL::Uint.new(texture.native_handle)] unless textures.has_key?(texture.native_handle)
+
+    a = ImVec2.new(pos.x, pos.y)
+    b = ImVec2.new(pos.x + texture_size.x, pos.y)
+    c = ImVec2.new(pos.x + texture_size.x, pos.y + texture_size.y)
+    d = ImVec2.new(pos.x, pos.y + texture_size.y)
+
+    # uv_a = ImVec2.new(0.0, 0.0)
+    # uv_b = ImVec2.new(1.0, 0.0)
+    # uv_c = ImVec2.new(1.0, 1.0)
+    # uv_d = ImVec2.new(0.0, 1.0)
+
+    transparent = ImVec4.new(0, 0, 0, 0)
+    white = ImVec4.new(1, 1, 1, 1) # 0xffffffff
+    col = LibImGui.ig_color_convert_float4_to_u32(white)
+
+    io = LibImGui.ig_get_io
+    fonts = io.value.fonts.value
+    ptr = fonts.tex_id
+    width = Float32.new(fonts.tex_width)
+    height = Float32.new(fonts.tex_height)
+
+    LibImGui.im_draw_list_add_image_quad(draw_list, @textures[texture.native_handle].to_unsafe, a, b, c, d, uv_a, uv_b, uv_c, uv_d, col) unless @textures.empty?
+    LibImGui.ig_dummy(ImVec2.new(texture_size.x, texture_size.y))
+  end
+end
+
+module Orb
 end
 
 class ImGui
@@ -533,5 +605,28 @@ class ImGui
     flags : LibImGui::ImGuiInputTextFlags = LibImGui::ImGuiInputTextFlags::None
   )
     LibImGui.ig_input_int(label, v, step, step_fast, flags)
+  end
+
+  def slider_int(
+    label : String,
+    v : LibC::Int*,
+    min : LibC::Int,
+    max : LibC::Int,
+    format : String = "%d"
+  )
+    LibImGui.ig_slider_int(label, v, min, max, format)
+  end
+
+  def list_box(
+    label : String,
+    current_item : LibC::Int*,
+    items : Array(String),
+    height_items : Int32 = 3
+  )
+    LibImGui.ig_list_box_str_arr(label, current_item, items.map(&.to_unsafe), items.size, height_items)
+  end
+
+  def screen_cursor_pos
+    LibImGui.ig_get_cursor_screen_pos_non_udt2
   end
 end

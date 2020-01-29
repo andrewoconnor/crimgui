@@ -5,6 +5,7 @@ lib LibImGui
   # aliases
   alias ImDrawIdx = LibC::UShort
   alias ImWchar = LibC::UShort
+  # alias ImTextureID = LibC::UInt
 
   # enums
   @[Flags]
@@ -1164,12 +1165,12 @@ lib LibImGui
   fun im_vector_im_texture_id_destroy = ImVector_ImTextureID_destroy(self : ImVector*)
   fun im_vector_im_texture_id_empty = ImVector_ImTextureID_empty(self : ImVector*) : Bool
   fun im_vector_im_texture_id_end = ImVector_ImTextureID_end(self : ImVector*) : Void**
-  fun im_vector_im_texture_id_erase = ImVector_ImTextureID_erase(self : ImVector*, it : Void**) : Void**
-  fun im_vector_im_texture_id_erase_t_ptr = ImVector_ImTextureID_eraseTPtr(self : ImVector*, it : Void**, it_last : Void**) : Void**
-  fun im_vector_im_texture_id_erase_unsorted = ImVector_ImTextureID_erase_unsorted(self : ImVector*, it : Void**) : Void**
-  fun im_vector_im_texture_id_front = ImVector_ImTextureID_front(self : ImVector*) : Void**
-  fun im_vector_im_texture_id_index_from_ptr = ImVector_ImTextureID_index_from_ptr(self : ImVector*, it : Void**) : LibC::Int
-  fun im_vector_im_texture_id_insert = ImVector_ImTextureID_insert(self : ImVector*, it : Void**, v : Void*) : Void**
+  fun im_vector_im_texture_id_erase = ImVector_ImTextureID_erase(self : ImVector*, it : Void*) : Void**
+  fun im_vector_im_texture_id_erase_t_ptr = ImVector_ImTextureID_eraseTPtr(self : ImVector*, it : Void*, it_last : Void*) : Void*
+  fun im_vector_im_texture_id_erase_unsorted = ImVector_ImTextureID_erase_unsorted(self : ImVector*, it : Void*) : Void*
+  fun im_vector_im_texture_id_front = ImVector_ImTextureID_front(self : ImVector*) : Void*
+  fun im_vector_im_texture_id_index_from_ptr = ImVector_ImTextureID_index_from_ptr(self : ImVector*, it : Void*) : LibC::Int
+  fun im_vector_im_texture_id_insert = ImVector_ImTextureID_insert(self : ImVector*, it : Void*, v : Void*) : Void*
   fun im_vector_im_texture_id_pop_back = ImVector_ImTextureID_pop_back(self : ImVector*)
   fun im_vector_im_texture_id_push_back = ImVector_ImTextureID_push_back(self : ImVector*, v : Void*)
   fun im_vector_im_texture_id_push_front = ImVector_ImTextureID_push_front(self : ImVector*, v : Void*)
