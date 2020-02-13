@@ -629,4 +629,12 @@ class ImGui
   def screen_cursor_pos
     LibImGui.ig_get_cursor_screen_pos_non_udt2
   end
+
+  def begin_menu(label : String, enabled : Bool = true)
+    LibImGui.ig_begin_menu(label, enabled)
+  end
+
+  def end_menu
+    LibImGui.ig_end_menu
+  end
 end
