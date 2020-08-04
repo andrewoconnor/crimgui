@@ -2,7 +2,6 @@ require "json"
 require "crz"
 
 class CodeGenerator
-  alias TypeJSON = Hash(String, Array(Hash(String, (Int32 | String))))
   alias FunctionJSON = Hash(String, Array(Hash(String, (Bool | Int32 | String | Array(Hash(String, String)) | Hash(String, String)))))
 
   def types_file
@@ -64,33 +63,12 @@ class CodeGenerator
     }
   end
 
-  def types_from_json(root)
-    TypeJSON.from_json(types_file, root)
-  end
-
   def enums
     @enums ||= EnumData.from_json(types_file).enum_defs.as(Array(EnumDefinition))
   end
 
-  def types_json
-    @types_json ||= types_from_json("structs").as(TypeJSON)
-  end
-
   def types
-    @types ||= types_json.map { |name, fields|
-      TypeDefinition.new(
-        name,
-        fields.each_with_object([] of TypeReference) { |field, refs|
-          refs << TypeReference.new(
-            field["name"].to_s,
-            field["type"].to_s,
-            field["size"]?.try(&.to_i),
-            field["template_type"]?.try(&.to_s),
-            enums
-          ) unless field["type"].to_s.includes?("static")
-        }
-      )
-    }.as(Array(TypeDefinition))
+    @types ||= TypeData.init(enums).from_json(types_file).type_defs.as(Array(TypeDefinition))
   end
 
   def functions_json
@@ -199,8 +177,8 @@ class CodeGenerator
     code_writer.write("")
     code_writer.write("# enums")
     generate_enums
-    # code_writer.write("# types")
-    # generate_types
+    code_writer.write("# types")
+    generate_types
     # code_writer.write("")
     # code_writer.write("# functions")
     # generate_functions
@@ -424,6 +402,54 @@ class TypeReference
 
   def function_pointer?
     type.includes?('(')
+  end
+end
+
+class TypeData
+  include JSON::Serializable
+
+  @@enum_defs = [] of EnumDefinition
+
+  @[JSON::Field(key: "structs", converter: TypeParser.init(@@enum_defs))]
+  property type_defs : Array(TypeDefinition)
+
+  def self.init(@@enum_defs : Array(EnumDefinition))
+    self
+  end
+end
+
+module TypeParser
+  @@enum_defs = [] of EnumDefinition
+
+  def self.init(@@enum_defs : Array(EnumDefinition))
+    self
+  end
+
+  def self.from_json(pull : JSON::PullParser)
+    ([] of TypeDefinition).tap do |type_defs|
+      pull.read_object do |type_name|
+        ([] of TypeReference).tap do |type_refs|
+          pull.read_array do
+            rname = rtype = ""
+            size = temp_type = nil
+            pull.read_object do |type_prop|
+              case type_prop
+              when "name"
+                rname = pull.read_string
+              when "template_type"
+                temp_type = pull.read?(String)
+              when "size"
+                size = pull.read?(Int32)
+              when "type"
+                rtype = pull.read_string
+              end
+            end
+            type_refs << TypeReference.new(rname, rtype, size, temp_type, @@enum_defs) unless rtype.includes?("static")
+          end
+          type_defs << TypeDefinition.new(type_name, type_refs)
+        end
+      end
+    end
   end
 end
 
