@@ -68,17 +68,8 @@ class CodeGenerator
     TypeJSON.from_json(types_file, root)
   end
 
-  def enums_json
-    @enums_json ||= types_from_json("enums").as(TypeJSON)
-  end
-
   def enums
-    @enums ||= enums_json.map { |name, members|
-      EnumDefinition.new(
-        name,
-        members.map { |m| EnumMember.new(name, m["name"].to_s, m["value"].to_s) }
-      )
-    }.as(Array(EnumDefinition))
+    @enums ||= EnumData.from_json(types_file).enum_defs.as(Array(EnumDefinition))
   end
 
   def types_json
@@ -191,7 +182,7 @@ class CodeGenerator
   end
 
   def output_path
-    @output_path ||= File.expand_path("../crimgui/lib2.cr", dir: __DIR__)
+    @output_path ||= File.expand_path("../crimgui/lib3.cr", dir: __DIR__)
   end
 
   def code_writer
@@ -208,11 +199,11 @@ class CodeGenerator
     code_writer.write("")
     code_writer.write("# enums")
     generate_enums
-    code_writer.write("# types")
-    generate_types
-    code_writer.write("")
-    code_writer.write("# functions")
-    generate_functions
+    # code_writer.write("# types")
+    # generate_types
+    # code_writer.write("")
+    # code_writer.write("# functions")
+    # generate_functions
     code_writer.end_block
     code_writer.finish
   end
@@ -344,6 +335,39 @@ class EnumMember
 
   def value
     @value ||= raw_value.gsub(def_name, "").rchop("_")
+  end
+end
+
+class EnumData
+  include JSON::Serializable
+
+  @[JSON::Field(key: "enums", converter: EnumParser)]
+  property enum_defs : Array(EnumDefinition)
+end
+
+module EnumParser
+  def self.from_json(pull : JSON::PullParser)
+    ([] of EnumDefinition).tap do |enum_defs|
+      pull.read_object do |enum_name|
+        ([] of EnumMember).tap do |enum_members|
+          pull.read_array do
+            ename = evalue = ""
+            pull.read_object do |enum_prop|
+              case enum_prop
+              when "calc_value"
+                pull.read_int
+              when "name"
+                ename = pull.read_string
+              when "value"
+                evalue = pull.read?(String) || pull.read?(Int32).to_s || ""
+              end
+            end
+            enum_members << EnumMember.new(enum_name, ename, evalue)
+          end
+          enum_defs << EnumDefinition.new(enum_name, enum_members)
+        end
+      end
+    end
   end
 end
 
@@ -495,4 +519,4 @@ end
 
 gen = CodeGenerator.new
 
-gen.generate
+puts gen.generate
