@@ -34,7 +34,7 @@ class CodeGenerator
       "ImVec4"                 => "ImVec4",
       "ImVec4_Simple"          => "ImVec4",
       "ImColor_Simple"         => "ImColor",
-      "ImTextureID"            => "LibC::UInt",
+      "ImTextureID"            => "Void*",
       "ImGuiID"                => "LibC::UInt",
       "ImDrawIdx"              => "LibC::UShort",
       "ImDrawListSharedData"   => "Void*",
@@ -179,9 +179,9 @@ class CodeGenerator
     generate_enums
     code_writer.write("# types")
     generate_types
-    # code_writer.write("")
-    # code_writer.write("# functions")
-    # generate_functions
+    code_writer.write("")
+    code_writer.write("# functions")
+    generate_functions
     code_writer.end_block
     code_writer.finish
   end

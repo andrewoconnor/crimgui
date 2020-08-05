@@ -1,3 +1,10 @@
+# crimgui
+
+Crystal bindings for dear imgui
+
+### demo
+
+```crystal
 require "./imgui"
 
 class ImguiTest
@@ -96,3 +103,4 @@ end
 
 test = ImguiTest.new
 test.run
+```

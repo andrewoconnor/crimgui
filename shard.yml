@@ -1,5 +1,5 @@
 name: crimgui
-version: 0.1.0
+version: 0.1.75
 
 authors:
   - Andrew O'Connor <andrewoconnor@outlook.com>
@@ -16,4 +16,4 @@ dependencies:
 
 license: MIT
 
-crystal: 0.29.0
+crystal: 0.35.1

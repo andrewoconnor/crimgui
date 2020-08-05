@@ -5,11 +5,11 @@ lib LibImGui
   # aliases
   alias ImDrawIdx = LibC::UShort
   alias ImWchar = LibC::UShort
-  # alias ImTextureID = LibC::UInt
 
   # enums
   @[Flags]
   enum ImDrawCornerFlags
+    None     = 0
     TopLeft  = 1 << 0
     TopRight = 1 << 1
     BotLeft  = 1 << 2
@@ -250,28 +250,36 @@ lib LibImGui
   end
 
   enum ImGuiKey
-    Tab        =  0
-    LeftArrow  =  1
-    RightArrow =  2
-    UpArrow    =  3
-    DownArrow  =  4
-    PageUp     =  5
-    PageDown   =  6
-    Home       =  7
-    End        =  8
-    Insert     =  9
-    Delete     = 10
-    Backspace  = 11
-    Space      = 12
-    Enter      = 13
-    Escape     = 14
-    A          = 15
-    C          = 16
-    V          = 17
-    X          = 18
-    Y          = 19
-    Z          = 20
-    COUNT      = 21
+    Tab         =  0
+    LeftArrow   =  1
+    RightArrow  =  2
+    UpArrow     =  3
+    DownArrow   =  4
+    PageUp      =  5
+    PageDown    =  6
+    Home        =  7
+    End         =  8
+    Insert      =  9
+    Delete      = 10
+    Backspace   = 11
+    Space       = 12
+    Enter       = 13
+    Escape      = 14
+    KeyPadEnter = 15
+    A           = 16
+    C           = 17
+    V           = 18
+    X           = 19
+    Y           = 20
+    Z           = 21
+    COUNT       = 22
+  end
+
+  enum ImGuiMouseButton
+    Left   = 0
+    Right  = 1
+    Middle = 2
+    COUNT  = 5
   end
 
   enum ImGuiMouseCursor
@@ -284,7 +292,8 @@ lib LibImGui
     ResizeNESW =  5
     ResizeNWSE =  6
     Hand       =  7
-    COUNT      =  8
+    NotAllowed =  8
+    COUNT      =  9
   end
 
   enum ImGuiNavInput
@@ -305,12 +314,11 @@ lib LibImGui
     TweakSlow     = 14
     TweakFast     = 15
     KeyMenu       = 16
-    KeyTab        = 17
-    KeyLeft       = 18
-    KeyRight      = 19
-    KeyUp         = 20
-    KeyDown       = 21
-    COUNT         = 22
+    KeyLeft       = 17
+    KeyRight      = 18
+    KeyUp         = 19
+    KeyDown       = 20
+    COUNT         = 21
     InternalStart = KeyMenu
   end
 
@@ -321,6 +329,7 @@ lib LibImGui
     SpanAllColumns   = 1 << 1
     AllowDoubleClick = 1 << 2
     Disabled         = 1 << 3
+    AllowItemOverlap = 1 << 4
   end
 
   enum ImGuiStyleVar
@@ -388,6 +397,8 @@ lib LibImGui
     Leaf                 = 1 << 8
     Bullet               = 1 << 9
     FramePadding         = 1 << 10
+    SpanAvailWidth       = 1 << 11
+    SpanFullWidth        = 1 << 12
     NavLeftJumpsBackHere = 1 << 13
     CollapsingHeader     = Framed | NoTreePushOnOpen | NoAutoOpenOnLog
   end
@@ -427,17 +438,6 @@ lib LibImGui
   end
 
   # types
-  struct CustomRect
-    id : LibC::UInt
-    width : LibC::UShort
-    height : LibC::UShort
-    x : LibC::UShort
-    y : LibC::UShort
-    glyph_advance_x : LibC::Float
-    glyph_offset : ImVec2
-    font : ImFont*
-  end
-
   struct ImColor
     value : ImVec4
   end
@@ -509,11 +509,12 @@ lib LibImGui
     config_data : ImFontConfig*
     config_data_count : LibC::Short
     fallback_char : LibC::UShort
+    ellipsis_char : LibC::UShort
+    dirty_lookup_tables : Bool
     scale : LibC::Float
     ascent : LibC::Float
     descent : LibC::Float
     metrics_total_surface : LibC::Int
-    dirty_lookup_tables : Bool
   end
 
   struct ImFontAtlas
@@ -534,6 +535,17 @@ lib LibImGui
     custom_rect_ids : LibC::Int[1]
   end
 
+  struct ImFontAtlasCustomRect
+    id : LibC::UInt
+    width : LibC::UShort
+    height : LibC::UShort
+    x : LibC::UShort
+    y : LibC::UShort
+    glyph_advance_x : LibC::Float
+    glyph_offset : ImVec2
+    font : ImFont*
+  end
+
   struct ImFontConfig
     font_data : Void*
     font_data_size : LibC::Int
@@ -551,6 +563,7 @@ lib LibImGui
     merge_mode : Bool
     rasterizer_flags : LibC::UInt
     rasterizer_multiply : LibC::Float
+    ellipsis_char : LibC::UShort
     name : LibC::Char[40]
     dst_font : ImFont*
   end
@@ -583,7 +596,7 @@ lib LibImGui
     mouse_double_click_time : LibC::Float
     mouse_double_click_max_dist : LibC::Float
     mouse_drag_threshold : LibC::Float
-    key_map : LibC::Int[21]
+    key_map : LibC::Int[22]
     key_repeat_delay : LibC::Float
     key_repeat_rate : LibC::Float
     user_data : Void*
@@ -597,6 +610,7 @@ lib LibImGui
     config_input_text_cursor_blink : Bool
     config_windows_resize_from_edges : Bool
     config_windows_move_from_title_bar_only : Bool
+    config_windows_memory_compact_timer : LibC::Float
     backend_platform_name : LibC::Char*
     backend_renderer_name : LibC::Char*
     backend_platform_user_data : Void*
@@ -617,7 +631,7 @@ lib LibImGui
     key_alt : Bool
     key_super : Bool
     keys_down : Bool[512]
-    nav_inputs : LibC::Float[22]
+    nav_inputs : LibC::Float[21]
     want_capture_mouse : Bool
     want_capture_keyboard : Bool
     want_text_input : Bool
@@ -646,8 +660,8 @@ lib LibImGui
     mouse_drag_max_distance_sqr : LibC::Float[5]
     keys_down_duration : LibC::Float[512]
     keys_down_duration_prev : LibC::Float[512]
-    nav_inputs_down_duration : LibC::Float[22]
-    nav_inputs_down_duration_prev : LibC::Float[22]
+    nav_inputs_down_duration : LibC::Float[21]
+    nav_inputs_down_duration_prev : LibC::Float[21]
     input_queue_characters : ImVector
   end
 
@@ -667,12 +681,12 @@ lib LibImGui
   end
 
   struct ImGuiListClipper
-    start_pos_y : LibC::Float
-    items_height : LibC::Float
-    items_count : LibC::Int
-    step_no : LibC::Int
     display_start : LibC::Int
     display_end : LibC::Int
+    items_count : LibC::Int
+    step_no : LibC::Int
+    items_height : LibC::Float
+    start_pos_y : LibC::Float
   end
 
   struct ImGuiOnceUponAFrame
@@ -701,6 +715,10 @@ lib LibImGui
     data : ImVector
   end
 
+  struct ImGuiStoragePair
+    key : LibC::UInt
+  end
+
   struct ImGuiStyle
     alpha : LibC::Float
     window_padding : ImVec2
@@ -727,6 +745,7 @@ lib LibImGui
     grab_rounding : LibC::Float
     tab_rounding : LibC::Float
     tab_border_size : LibC::Float
+    color_button_position : ImGuiDir
     button_text_align : ImVec2
     selectable_text_align : ImVec2
     display_window_padding : ImVec2
@@ -735,6 +754,7 @@ lib LibImGui
     anti_aliased_lines : Bool
     anti_aliased_fill : Bool
     curve_tessellation_tol : LibC::Float
+    circle_segment_max_error : LibC::Float
     colors : ImVec4[48]
   end
 
@@ -748,15 +768,12 @@ lib LibImGui
     count_grep : LibC::Int
   end
 
-  struct TextRange
+  struct ImGuiTextRange
     b : LibC::Char*
     e : LibC::Char*
   end
 
   # functions
-  fun custom_rect_custom_rect = CustomRect_CustomRect : CustomRect*
-  fun custom_rect_is_packed = CustomRect_IsPacked(self : CustomRect*) : Bool
-  fun custom_rect_destroy = CustomRect_destroy(self : CustomRect*)
   fun im_color_hsv_non_udt2 = ImColor_HSV_nonUDT2(self : ImColor*, h : LibC::Float, s : LibC::Float, v : LibC::Float, a : LibC::Float) : ImColor
   fun im_color_im_color = ImColor_ImColor : ImColor*
   fun im_color_im_color_int = ImColor_ImColorInt(r : LibC::Int, g : LibC::Int, b : LibC::Int, a : LibC::Int) : ImColor*
@@ -779,26 +796,28 @@ lib LibImGui
   fun im_draw_list_splitter_set_current_channel = ImDrawListSplitter_SetCurrentChannel(self : ImDrawListSplitter*, draw_list : ImDrawList*, channel_idx : LibC::Int)
   fun im_draw_list_splitter_split = ImDrawListSplitter_Split(self : ImDrawListSplitter*, draw_list : ImDrawList*, count : LibC::Int)
   fun im_draw_list_splitter_destroy = ImDrawListSplitter_destroy(self : ImDrawListSplitter*)
-  fun im_draw_list_add_bezier_curve = ImDrawList_AddBezierCurve(self : ImDrawList*, pos0 : ImVec2, cp0 : ImVec2, cp1 : ImVec2, pos1 : ImVec2, col : LibC::UInt, thickness : LibC::Float, num_segments : LibC::Int)
-  fun im_draw_list_add_callback = ImDrawList_AddCallback(self : ImDrawList*, callback : Void*, callback_data : Void*)
-  fun im_draw_list_add_circle = ImDrawList_AddCircle(self : ImDrawList*, centre : ImVec2, radius : LibC::Float, col : LibC::UInt, num_segments : LibC::Int, thickness : LibC::Float)
-  fun im_draw_list_add_circle_filled = ImDrawList_AddCircleFilled(self : ImDrawList*, centre : ImVec2, radius : LibC::Float, col : LibC::UInt, num_segments : LibC::Int)
+  fun im_draw_list_add_bezier_curve = ImDrawList_AddBezierCurve(self : ImDrawList*, p1 : ImVec2, p2 : ImVec2, p3 : ImVec2, p4 : ImVec2, col : LibC::UInt, thickness : LibC::Float, num_segments : LibC::Int)
+  fun im_draw_list_add_callback = ImDrawList_AddCallback(self : ImDrawList*, callback : (ImDrawList*, ImDrawCmd* ->), callback_data : Void*)
+  fun im_draw_list_add_circle = ImDrawList_AddCircle(self : ImDrawList*, center : ImVec2, radius : LibC::Float, col : LibC::UInt, num_segments : LibC::Int, thickness : LibC::Float)
+  fun im_draw_list_add_circle_filled = ImDrawList_AddCircleFilled(self : ImDrawList*, center : ImVec2, radius : LibC::Float, col : LibC::UInt, num_segments : LibC::Int)
   fun im_draw_list_add_convex_poly_filled = ImDrawList_AddConvexPolyFilled(self : ImDrawList*, points : ImVec2*, num_points : LibC::Int, col : LibC::UInt)
   fun im_draw_list_add_draw_cmd = ImDrawList_AddDrawCmd(self : ImDrawList*)
-  fun im_draw_list_add_image = ImDrawList_AddImage(self : ImDrawList*, user_texture_id : Void*, a : ImVec2, b : ImVec2, uv_a : ImVec2, uv_b : ImVec2, col : LibC::UInt)
-  fun im_draw_list_add_image_quad = ImDrawList_AddImageQuad(self : ImDrawList*, user_texture_id : Void*, a : ImVec2, b : ImVec2, c : ImVec2, d : ImVec2, uv_a : ImVec2, uv_b : ImVec2, uv_c : ImVec2, uv_d : ImVec2, col : LibC::UInt)
-  fun im_draw_list_add_image_rounded = ImDrawList_AddImageRounded(self : ImDrawList*, user_texture_id : Void*, a : ImVec2, b : ImVec2, uv_a : ImVec2, uv_b : ImVec2, col : LibC::UInt, rounding : LibC::Float, rounding_corners : LibC::Int)
-  fun im_draw_list_add_line = ImDrawList_AddLine(self : ImDrawList*, a : ImVec2, b : ImVec2, col : LibC::UInt, thickness : LibC::Float)
+  fun im_draw_list_add_image = ImDrawList_AddImage(self : ImDrawList*, user_texture_id : Void*, p_min : ImVec2, p_max : ImVec2, uv_min : ImVec2, uv_max : ImVec2, col : LibC::UInt)
+  fun im_draw_list_add_image_quad = ImDrawList_AddImageQuad(self : ImDrawList*, user_texture_id : Void*, p1 : ImVec2, p2 : ImVec2, p3 : ImVec2, p4 : ImVec2, uv1 : ImVec2, uv2 : ImVec2, uv3 : ImVec2, uv4 : ImVec2, col : LibC::UInt)
+  fun im_draw_list_add_image_rounded = ImDrawList_AddImageRounded(self : ImDrawList*, user_texture_id : Void*, p_min : ImVec2, p_max : ImVec2, uv_min : ImVec2, uv_max : ImVec2, col : LibC::UInt, rounding : LibC::Float, rounding_corners : ImDrawCornerFlags)
+  fun im_draw_list_add_line = ImDrawList_AddLine(self : ImDrawList*, p1 : ImVec2, p2 : ImVec2, col : LibC::UInt, thickness : LibC::Float)
+  fun im_draw_list_add_ngon = ImDrawList_AddNgon(self : ImDrawList*, center : ImVec2, radius : LibC::Float, col : LibC::UInt, num_segments : LibC::Int, thickness : LibC::Float)
+  fun im_draw_list_add_ngon_filled = ImDrawList_AddNgonFilled(self : ImDrawList*, center : ImVec2, radius : LibC::Float, col : LibC::UInt, num_segments : LibC::Int)
   fun im_draw_list_add_polyline = ImDrawList_AddPolyline(self : ImDrawList*, points : ImVec2*, num_points : LibC::Int, col : LibC::UInt, closed : Bool, thickness : LibC::Float)
-  fun im_draw_list_add_quad = ImDrawList_AddQuad(self : ImDrawList*, a : ImVec2, b : ImVec2, c : ImVec2, d : ImVec2, col : LibC::UInt, thickness : LibC::Float)
-  fun im_draw_list_add_quad_filled = ImDrawList_AddQuadFilled(self : ImDrawList*, a : ImVec2, b : ImVec2, c : ImVec2, d : ImVec2, col : LibC::UInt)
-  fun im_draw_list_add_rect = ImDrawList_AddRect(self : ImDrawList*, a : ImVec2, b : ImVec2, col : LibC::UInt, rounding : LibC::Float, rounding_corners_flags : LibC::Int, thickness : LibC::Float)
-  fun im_draw_list_add_rect_filled = ImDrawList_AddRectFilled(self : ImDrawList*, a : ImVec2, b : ImVec2, col : LibC::UInt, rounding : LibC::Float, rounding_corners_flags : LibC::Int)
-  fun im_draw_list_add_rect_filled_multi_color = ImDrawList_AddRectFilledMultiColor(self : ImDrawList*, a : ImVec2, b : ImVec2, col_upr_left : LibC::UInt, col_upr_right : LibC::UInt, col_bot_right : LibC::UInt, col_bot_left : LibC::UInt)
+  fun im_draw_list_add_quad = ImDrawList_AddQuad(self : ImDrawList*, p1 : ImVec2, p2 : ImVec2, p3 : ImVec2, p4 : ImVec2, col : LibC::UInt, thickness : LibC::Float)
+  fun im_draw_list_add_quad_filled = ImDrawList_AddQuadFilled(self : ImDrawList*, p1 : ImVec2, p2 : ImVec2, p3 : ImVec2, p4 : ImVec2, col : LibC::UInt)
+  fun im_draw_list_add_rect = ImDrawList_AddRect(self : ImDrawList*, p_min : ImVec2, p_max : ImVec2, col : LibC::UInt, rounding : LibC::Float, rounding_corners : ImDrawCornerFlags, thickness : LibC::Float)
+  fun im_draw_list_add_rect_filled = ImDrawList_AddRectFilled(self : ImDrawList*, p_min : ImVec2, p_max : ImVec2, col : LibC::UInt, rounding : LibC::Float, rounding_corners : ImDrawCornerFlags)
+  fun im_draw_list_add_rect_filled_multi_color = ImDrawList_AddRectFilledMultiColor(self : ImDrawList*, p_min : ImVec2, p_max : ImVec2, col_upr_left : LibC::UInt, col_upr_right : LibC::UInt, col_bot_right : LibC::UInt, col_bot_left : LibC::UInt)
   fun im_draw_list_add_text = ImDrawList_AddText(self : ImDrawList*, pos : ImVec2, col : LibC::UInt, text_begin : LibC::Char*, text_end : LibC::Char*)
   fun im_draw_list_add_text_font_ptr = ImDrawList_AddTextFontPtr(self : ImDrawList*, font : ImFont*, font_size : LibC::Float, pos : ImVec2, col : LibC::UInt, text_begin : LibC::Char*, text_end : LibC::Char*, wrap_width : LibC::Float, cpu_fine_clip_rect : ImVec4*)
-  fun im_draw_list_add_triangle = ImDrawList_AddTriangle(self : ImDrawList*, a : ImVec2, b : ImVec2, c : ImVec2, col : LibC::UInt, thickness : LibC::Float)
-  fun im_draw_list_add_triangle_filled = ImDrawList_AddTriangleFilled(self : ImDrawList*, a : ImVec2, b : ImVec2, c : ImVec2, col : LibC::UInt)
+  fun im_draw_list_add_triangle = ImDrawList_AddTriangle(self : ImDrawList*, p1 : ImVec2, p2 : ImVec2, p3 : ImVec2, col : LibC::UInt, thickness : LibC::Float)
+  fun im_draw_list_add_triangle_filled = ImDrawList_AddTriangleFilled(self : ImDrawList*, p1 : ImVec2, p2 : ImVec2, p3 : ImVec2, col : LibC::UInt)
   fun im_draw_list_channels_merge = ImDrawList_ChannelsMerge(self : ImDrawList*)
   fun im_draw_list_channels_set_current = ImDrawList_ChannelsSetCurrent(self : ImDrawList*, n : LibC::Int)
   fun im_draw_list_channels_split = ImDrawList_ChannelsSplit(self : ImDrawList*, count : LibC::Int)
@@ -808,14 +827,14 @@ lib LibImGui
   fun im_draw_list_get_clip_rect_max_non_udt2 = ImDrawList_GetClipRectMax_nonUDT2(self : ImDrawList*) : ImVec2
   fun im_draw_list_get_clip_rect_min_non_udt2 = ImDrawList_GetClipRectMin_nonUDT2(self : ImDrawList*) : ImVec2
   fun im_draw_list_im_draw_list = ImDrawList_ImDrawList(shared_data : Void**) : ImDrawList*
-  fun im_draw_list_path_arc_to = ImDrawList_PathArcTo(self : ImDrawList*, centre : ImVec2, radius : LibC::Float, a_min : LibC::Float, a_max : LibC::Float, num_segments : LibC::Int)
-  fun im_draw_list_path_arc_to_fast = ImDrawList_PathArcToFast(self : ImDrawList*, centre : ImVec2, radius : LibC::Float, a_min_of_12 : LibC::Int, a_max_of_12 : LibC::Int)
-  fun im_draw_list_path_bezier_curve_to = ImDrawList_PathBezierCurveTo(self : ImDrawList*, p1 : ImVec2, p2 : ImVec2, p3 : ImVec2, num_segments : LibC::Int)
+  fun im_draw_list_path_arc_to = ImDrawList_PathArcTo(self : ImDrawList*, center : ImVec2, radius : LibC::Float, a_min : LibC::Float, a_max : LibC::Float, num_segments : LibC::Int)
+  fun im_draw_list_path_arc_to_fast = ImDrawList_PathArcToFast(self : ImDrawList*, center : ImVec2, radius : LibC::Float, a_min_of_12 : LibC::Int, a_max_of_12 : LibC::Int)
+  fun im_draw_list_path_bezier_curve_to = ImDrawList_PathBezierCurveTo(self : ImDrawList*, p2 : ImVec2, p3 : ImVec2, p4 : ImVec2, num_segments : LibC::Int)
   fun im_draw_list_path_clear = ImDrawList_PathClear(self : ImDrawList*)
   fun im_draw_list_path_fill_convex = ImDrawList_PathFillConvex(self : ImDrawList*, col : LibC::UInt)
   fun im_draw_list_path_line_to = ImDrawList_PathLineTo(self : ImDrawList*, pos : ImVec2)
   fun im_draw_list_path_line_to_merge_duplicate = ImDrawList_PathLineToMergeDuplicate(self : ImDrawList*, pos : ImVec2)
-  fun im_draw_list_path_rect = ImDrawList_PathRect(self : ImDrawList*, rect_min : ImVec2, rect_max : ImVec2, rounding : LibC::Float, rounding_corners_flags : LibC::Int)
+  fun im_draw_list_path_rect = ImDrawList_PathRect(self : ImDrawList*, rect_min : ImVec2, rect_max : ImVec2, rounding : LibC::Float, rounding_corners : ImDrawCornerFlags)
   fun im_draw_list_path_stroke = ImDrawList_PathStroke(self : ImDrawList*, col : LibC::UInt, closed : Bool, thickness : LibC::Float)
   fun im_draw_list_pop_clip_rect = ImDrawList_PopClipRect(self : ImDrawList*)
   fun im_draw_list_pop_texture_id = ImDrawList_PopTextureID(self : ImDrawList*)
@@ -823,6 +842,7 @@ lib LibImGui
   fun im_draw_list_prim_rect = ImDrawList_PrimRect(self : ImDrawList*, a : ImVec2, b : ImVec2, col : LibC::UInt)
   fun im_draw_list_prim_rect_uv = ImDrawList_PrimRectUV(self : ImDrawList*, a : ImVec2, b : ImVec2, uv_a : ImVec2, uv_b : ImVec2, col : LibC::UInt)
   fun im_draw_list_prim_reserve = ImDrawList_PrimReserve(self : ImDrawList*, idx_count : LibC::Int, vtx_count : LibC::Int)
+  fun im_draw_list_prim_unreserve = ImDrawList_PrimUnreserve(self : ImDrawList*, idx_count : LibC::Int, vtx_count : LibC::Int)
   fun im_draw_list_prim_vtx = ImDrawList_PrimVtx(self : ImDrawList*, pos : ImVec2, uv : ImVec2, col : LibC::UInt)
   fun im_draw_list_prim_write_idx = ImDrawList_PrimWriteIdx(self : ImDrawList*, idx : LibC::UShort)
   fun im_draw_list_prim_write_vtx = ImDrawList_PrimWriteVtx(self : ImDrawList*, pos : ImVec2, uv : ImVec2, col : LibC::UInt)
@@ -832,6 +852,9 @@ lib LibImGui
   fun im_draw_list_update_clip_rect = ImDrawList_UpdateClipRect(self : ImDrawList*)
   fun im_draw_list_update_texture_id = ImDrawList_UpdateTextureID(self : ImDrawList*)
   fun im_draw_list_destroy = ImDrawList_destroy(self : ImDrawList*)
+  fun im_font_atlas_custom_rect_im_font_atlas_custom_rect = ImFontAtlasCustomRect_ImFontAtlasCustomRect : ImFontAtlasCustomRect*
+  fun im_font_atlas_custom_rect_is_packed = ImFontAtlasCustomRect_IsPacked(self : ImFontAtlasCustomRect*) : Bool
+  fun im_font_atlas_custom_rect_destroy = ImFontAtlasCustomRect_destroy(self : ImFontAtlasCustomRect*)
   fun im_font_atlas_add_custom_rect_font_glyph = ImFontAtlas_AddCustomRectFontGlyph(self : ImFontAtlas*, font : ImFont*, id : LibC::UShort, width : LibC::Int, height : LibC::Int, advance_x : LibC::Float, offset : ImVec2) : LibC::Int
   fun im_font_atlas_add_custom_rect_regular = ImFontAtlas_AddCustomRectRegular(self : ImFontAtlas*, id : LibC::UInt, width : LibC::Int, height : LibC::Int) : LibC::Int
   fun im_font_atlas_add_font = ImFontAtlas_AddFont(self : ImFontAtlas*, font_cfg : ImFontConfig*) : ImFont*
@@ -841,12 +864,12 @@ lib LibImGui
   fun im_font_atlas_add_font_from_memory_compressed_ttf = ImFontAtlas_AddFontFromMemoryCompressedTTF(self : ImFontAtlas*, compressed_font_data : Void*, compressed_font_size : LibC::Int, size_pixels : LibC::Float, font_cfg : ImFontConfig*, glyph_ranges : LibC::UShort*) : ImFont*
   fun im_font_atlas_add_font_from_memory_ttf = ImFontAtlas_AddFontFromMemoryTTF(self : ImFontAtlas*, font_data : Void*, font_size : LibC::Int, size_pixels : LibC::Float, font_cfg : ImFontConfig*, glyph_ranges : LibC::UShort*) : ImFont*
   fun im_font_atlas_build = ImFontAtlas_Build(self : ImFontAtlas*) : Bool
-  fun im_font_atlas_calc_custom_rect_uv = ImFontAtlas_CalcCustomRectUV(self : ImFontAtlas*, rect : CustomRect*, out_uv_min : ImVec2*, out_uv_max : ImVec2*)
+  fun im_font_atlas_calc_custom_rect_uv = ImFontAtlas_CalcCustomRectUV(self : ImFontAtlas*, rect : ImFontAtlasCustomRect*, out_uv_min : ImVec2*, out_uv_max : ImVec2*)
   fun im_font_atlas_clear = ImFontAtlas_Clear(self : ImFontAtlas*)
   fun im_font_atlas_clear_fonts = ImFontAtlas_ClearFonts(self : ImFontAtlas*)
   fun im_font_atlas_clear_input_data = ImFontAtlas_ClearInputData(self : ImFontAtlas*)
   fun im_font_atlas_clear_tex_data = ImFontAtlas_ClearTexData(self : ImFontAtlas*)
-  fun im_font_atlas_get_custom_rect_by_index = ImFontAtlas_GetCustomRectByIndex(self : ImFontAtlas*, index : LibC::Int) : CustomRect*
+  fun im_font_atlas_get_custom_rect_by_index = ImFontAtlas_GetCustomRectByIndex(self : ImFontAtlas*, index : LibC::Int) : ImFontAtlasCustomRect*
   fun im_font_atlas_get_glyph_ranges_chinese_full = ImFontAtlas_GetGlyphRangesChineseFull(self : ImFontAtlas*) : LibC::UShort*
   fun im_font_atlas_get_glyph_ranges_chinese_simplified_common = ImFontAtlas_GetGlyphRangesChineseSimplifiedCommon(self : ImFontAtlas*) : LibC::UShort*
   fun im_font_atlas_get_glyph_ranges_cyrillic = ImFontAtlas_GetGlyphRangesCyrillic(self : ImFontAtlas*) : LibC::UShort*
@@ -913,6 +936,10 @@ lib LibImGui
   fun im_gui_payload_is_delivery = ImGuiPayload_IsDelivery(self : ImGuiPayload*) : Bool
   fun im_gui_payload_is_preview = ImGuiPayload_IsPreview(self : ImGuiPayload*) : Bool
   fun im_gui_payload_destroy = ImGuiPayload_destroy(self : ImGuiPayload*)
+  fun im_gui_storage_pair_im_gui_storage_pair_int = ImGuiStoragePair_ImGuiStoragePairInt(_key : LibC::UInt, _val_i : LibC::Int) : ImGuiStoragePair*
+  fun im_gui_storage_pair_im_gui_storage_pair_float = ImGuiStoragePair_ImGuiStoragePairFloat(_key : LibC::UInt, _val_f : LibC::Float) : ImGuiStoragePair*
+  fun im_gui_storage_pair_im_gui_storage_pair_ptr = ImGuiStoragePair_ImGuiStoragePairPtr(_key : LibC::UInt, _val_p : Void*) : ImGuiStoragePair*
+  fun im_gui_storage_pair_destroy = ImGuiStoragePair_destroy(self : ImGuiStoragePair*)
   fun im_gui_storage_build_sort_by_key = ImGuiStorage_BuildSortByKey(self : ImGuiStorage*)
   fun im_gui_storage_clear = ImGuiStorage_Clear(self : ImGuiStorage*)
   fun im_gui_storage_get_bool = ImGuiStorage_GetBool(self : ImGuiStorage*, key : LibC::UInt, default_val : Bool) : Bool
@@ -949,453 +976,34 @@ lib LibImGui
   fun im_gui_text_filter_is_active = ImGuiTextFilter_IsActive(self : ImGuiTextFilter*) : Bool
   fun im_gui_text_filter_pass_filter = ImGuiTextFilter_PassFilter(self : ImGuiTextFilter*, text : LibC::Char*, text_end : LibC::Char*) : Bool
   fun im_gui_text_filter_destroy = ImGuiTextFilter_destroy(self : ImGuiTextFilter*)
+  fun im_gui_text_range_im_gui_text_range = ImGuiTextRange_ImGuiTextRange : ImGuiTextRange*
+  fun im_gui_text_range_im_gui_text_range_str = ImGuiTextRange_ImGuiTextRangeStr(_b : LibC::Char*, _e : LibC::Char*) : ImGuiTextRange*
+  fun im_gui_text_range_destroy = ImGuiTextRange_destroy(self : ImGuiTextRange*)
+  fun im_gui_text_range_empty = ImGuiTextRange_empty(self : ImGuiTextRange*) : Bool
+  fun im_gui_text_range_split = ImGuiTextRange_split(self : ImGuiTextRange*, separator : LibC::Char, out : ImVector*)
   fun im_vec2_im_vec2 = ImVec2_ImVec2 : ImVec2*
   fun im_vec2_im_vec2_float = ImVec2_ImVec2Float(_x : LibC::Float, _y : LibC::Float) : ImVec2*
   fun im_vec2_destroy = ImVec2_destroy(self : ImVec2*)
   fun im_vec4_im_vec4 = ImVec4_ImVec4 : ImVec4*
   fun im_vec4_im_vec4_float = ImVec4_ImVec4Float(_x : LibC::Float, _y : LibC::Float, _z : LibC::Float, _w : LibC::Float) : ImVec4*
   fun im_vec4_destroy = ImVec4_destroy(self : ImVec4*)
-  fun im_vector_custom_rect_im_vector_custom_rect = ImVector_CustomRect_ImVector_CustomRect : ImVector*
-  fun im_vector_custom_rect_im_vector_custom_rect_vector = ImVector_CustomRect_ImVector_CustomRectVector(src : ImVector) : ImVector*
-  fun im_vector_custom_rect__grow_capacity = ImVector_CustomRect__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_custom_rect_back = ImVector_CustomRect_back(self : ImVector*) : CustomRect*
-  fun im_vector_custom_rect_begin = ImVector_CustomRect_begin(self : ImVector*) : CustomRect*
-  fun im_vector_custom_rect_capacity = ImVector_CustomRect_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_custom_rect_clear = ImVector_CustomRect_clear(self : ImVector*)
-  fun im_vector_custom_rect_destroy = ImVector_CustomRect_destroy(self : ImVector*)
-  fun im_vector_custom_rect_empty = ImVector_CustomRect_empty(self : ImVector*) : Bool
-  fun im_vector_custom_rect_end = ImVector_CustomRect_end(self : ImVector*) : CustomRect*
-  fun im_vector_custom_rect_erase = ImVector_CustomRect_erase(self : ImVector*, it : CustomRect*) : CustomRect*
-  fun im_vector_custom_rect_erase_t_ptr = ImVector_CustomRect_eraseTPtr(self : ImVector*, it : CustomRect*, it_last : CustomRect*) : CustomRect*
-  fun im_vector_custom_rect_erase_unsorted = ImVector_CustomRect_erase_unsorted(self : ImVector*, it : CustomRect*) : CustomRect*
-  fun im_vector_custom_rect_front = ImVector_CustomRect_front(self : ImVector*) : CustomRect*
-  fun im_vector_custom_rect_index_from_ptr = ImVector_CustomRect_index_from_ptr(self : ImVector*, it : CustomRect*) : LibC::Int
-  fun im_vector_custom_rect_insert = ImVector_CustomRect_insert(self : ImVector*, it : CustomRect*, v : CustomRect) : CustomRect*
-  fun im_vector_custom_rect_pop_back = ImVector_CustomRect_pop_back(self : ImVector*)
-  fun im_vector_custom_rect_push_back = ImVector_CustomRect_push_back(self : ImVector*, v : CustomRect)
-  fun im_vector_custom_rect_push_front = ImVector_CustomRect_push_front(self : ImVector*, v : CustomRect)
-  fun im_vector_custom_rect_reserve = ImVector_CustomRect_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_custom_rect_resize = ImVector_CustomRect_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_custom_rect_resize_t = ImVector_CustomRect_resizeT(self : ImVector*, new_size : LibC::Int, v : CustomRect)
-  fun im_vector_custom_rect_size = ImVector_CustomRect_size(self : ImVector*) : LibC::Int
-  fun im_vector_custom_rect_size_in_bytes = ImVector_CustomRect_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_custom_rect_swap = ImVector_CustomRect_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_draw_channel_im_vector_im_draw_channel = ImVector_ImDrawChannel_ImVector_ImDrawChannel : ImVector*
-  fun im_vector_im_draw_channel_im_vector_im_draw_channel_vector = ImVector_ImDrawChannel_ImVector_ImDrawChannelVector(src : ImVector) : ImVector*
-  fun im_vector_im_draw_channel__grow_capacity = ImVector_ImDrawChannel__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_draw_channel_back = ImVector_ImDrawChannel_back(self : ImVector*) : ImDrawChannel*
-  fun im_vector_im_draw_channel_begin = ImVector_ImDrawChannel_begin(self : ImVector*) : ImDrawChannel*
-  fun im_vector_im_draw_channel_capacity = ImVector_ImDrawChannel_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_channel_clear = ImVector_ImDrawChannel_clear(self : ImVector*)
-  fun im_vector_im_draw_channel_destroy = ImVector_ImDrawChannel_destroy(self : ImVector*)
-  fun im_vector_im_draw_channel_empty = ImVector_ImDrawChannel_empty(self : ImVector*) : Bool
-  fun im_vector_im_draw_channel_end = ImVector_ImDrawChannel_end(self : ImVector*) : ImDrawChannel*
-  fun im_vector_im_draw_channel_erase = ImVector_ImDrawChannel_erase(self : ImVector*, it : ImDrawChannel*) : ImDrawChannel*
-  fun im_vector_im_draw_channel_erase_t_ptr = ImVector_ImDrawChannel_eraseTPtr(self : ImVector*, it : ImDrawChannel*, it_last : ImDrawChannel*) : ImDrawChannel*
-  fun im_vector_im_draw_channel_erase_unsorted = ImVector_ImDrawChannel_erase_unsorted(self : ImVector*, it : ImDrawChannel*) : ImDrawChannel*
-  fun im_vector_im_draw_channel_front = ImVector_ImDrawChannel_front(self : ImVector*) : ImDrawChannel*
-  fun im_vector_im_draw_channel_index_from_ptr = ImVector_ImDrawChannel_index_from_ptr(self : ImVector*, it : ImDrawChannel*) : LibC::Int
-  fun im_vector_im_draw_channel_insert = ImVector_ImDrawChannel_insert(self : ImVector*, it : ImDrawChannel*, v : ImDrawChannel) : ImDrawChannel*
-  fun im_vector_im_draw_channel_pop_back = ImVector_ImDrawChannel_pop_back(self : ImVector*)
-  fun im_vector_im_draw_channel_push_back = ImVector_ImDrawChannel_push_back(self : ImVector*, v : ImDrawChannel)
-  fun im_vector_im_draw_channel_push_front = ImVector_ImDrawChannel_push_front(self : ImVector*, v : ImDrawChannel)
-  fun im_vector_im_draw_channel_reserve = ImVector_ImDrawChannel_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_draw_channel_resize = ImVector_ImDrawChannel_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_draw_channel_resize_t = ImVector_ImDrawChannel_resizeT(self : ImVector*, new_size : LibC::Int, v : ImDrawChannel)
-  fun im_vector_im_draw_channel_size = ImVector_ImDrawChannel_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_channel_size_in_bytes = ImVector_ImDrawChannel_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_channel_swap = ImVector_ImDrawChannel_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_draw_cmd_im_vector_im_draw_cmd = ImVector_ImDrawCmd_ImVector_ImDrawCmd : ImVector*
-  fun im_vector_im_draw_cmd_im_vector_im_draw_cmd_vector = ImVector_ImDrawCmd_ImVector_ImDrawCmdVector(src : ImVector) : ImVector*
-  fun im_vector_im_draw_cmd__grow_capacity = ImVector_ImDrawCmd__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_draw_cmd_back = ImVector_ImDrawCmd_back(self : ImVector*) : ImDrawCmd*
-  fun im_vector_im_draw_cmd_begin = ImVector_ImDrawCmd_begin(self : ImVector*) : ImDrawCmd*
-  fun im_vector_im_draw_cmd_capacity = ImVector_ImDrawCmd_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_cmd_clear = ImVector_ImDrawCmd_clear(self : ImVector*)
-  fun im_vector_im_draw_cmd_destroy = ImVector_ImDrawCmd_destroy(self : ImVector*)
-  fun im_vector_im_draw_cmd_empty = ImVector_ImDrawCmd_empty(self : ImVector*) : Bool
-  fun im_vector_im_draw_cmd_end = ImVector_ImDrawCmd_end(self : ImVector*) : ImDrawCmd*
-  fun im_vector_im_draw_cmd_erase = ImVector_ImDrawCmd_erase(self : ImVector*, it : ImDrawCmd*) : ImDrawCmd*
-  fun im_vector_im_draw_cmd_erase_t_ptr = ImVector_ImDrawCmd_eraseTPtr(self : ImVector*, it : ImDrawCmd*, it_last : ImDrawCmd*) : ImDrawCmd*
-  fun im_vector_im_draw_cmd_erase_unsorted = ImVector_ImDrawCmd_erase_unsorted(self : ImVector*, it : ImDrawCmd*) : ImDrawCmd*
-  fun im_vector_im_draw_cmd_front = ImVector_ImDrawCmd_front(self : ImVector*) : ImDrawCmd*
-  fun im_vector_im_draw_cmd_index_from_ptr = ImVector_ImDrawCmd_index_from_ptr(self : ImVector*, it : ImDrawCmd*) : LibC::Int
-  fun im_vector_im_draw_cmd_insert = ImVector_ImDrawCmd_insert(self : ImVector*, it : ImDrawCmd*, v : ImDrawCmd) : ImDrawCmd*
-  fun im_vector_im_draw_cmd_pop_back = ImVector_ImDrawCmd_pop_back(self : ImVector*)
-  fun im_vector_im_draw_cmd_push_back = ImVector_ImDrawCmd_push_back(self : ImVector*, v : ImDrawCmd)
-  fun im_vector_im_draw_cmd_push_front = ImVector_ImDrawCmd_push_front(self : ImVector*, v : ImDrawCmd)
-  fun im_vector_im_draw_cmd_reserve = ImVector_ImDrawCmd_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_draw_cmd_resize = ImVector_ImDrawCmd_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_draw_cmd_resize_t = ImVector_ImDrawCmd_resizeT(self : ImVector*, new_size : LibC::Int, v : ImDrawCmd)
-  fun im_vector_im_draw_cmd_size = ImVector_ImDrawCmd_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_cmd_size_in_bytes = ImVector_ImDrawCmd_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_cmd_swap = ImVector_ImDrawCmd_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_draw_idx_im_vector_im_draw_idx = ImVector_ImDrawIdx_ImVector_ImDrawIdx : ImVector*
-  fun im_vector_im_draw_idx_im_vector_im_draw_idx_vector = ImVector_ImDrawIdx_ImVector_ImDrawIdxVector(src : ImVector) : ImVector*
-  fun im_vector_im_draw_idx__grow_capacity = ImVector_ImDrawIdx__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_draw_idx_back = ImVector_ImDrawIdx_back(self : ImVector*) : LibC::UShort*
-  fun im_vector_im_draw_idx_begin = ImVector_ImDrawIdx_begin(self : ImVector*) : LibC::UShort*
-  fun im_vector_im_draw_idx_capacity = ImVector_ImDrawIdx_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_idx_clear = ImVector_ImDrawIdx_clear(self : ImVector*)
-  fun im_vector_im_draw_idx_destroy = ImVector_ImDrawIdx_destroy(self : ImVector*)
-  fun im_vector_im_draw_idx_empty = ImVector_ImDrawIdx_empty(self : ImVector*) : Bool
-  fun im_vector_im_draw_idx_end = ImVector_ImDrawIdx_end(self : ImVector*) : LibC::UShort*
-  fun im_vector_im_draw_idx_erase = ImVector_ImDrawIdx_erase(self : ImVector*, it : LibC::UShort*) : LibC::UShort*
-  fun im_vector_im_draw_idx_erase_t_ptr = ImVector_ImDrawIdx_eraseTPtr(self : ImVector*, it : LibC::UShort*, it_last : LibC::UShort*) : LibC::UShort*
-  fun im_vector_im_draw_idx_erase_unsorted = ImVector_ImDrawIdx_erase_unsorted(self : ImVector*, it : LibC::UShort*) : LibC::UShort*
-  fun im_vector_im_draw_idx_front = ImVector_ImDrawIdx_front(self : ImVector*) : LibC::UShort*
-  fun im_vector_im_draw_idx_index_from_ptr = ImVector_ImDrawIdx_index_from_ptr(self : ImVector*, it : LibC::UShort*) : LibC::Int
-  fun im_vector_im_draw_idx_insert = ImVector_ImDrawIdx_insert(self : ImVector*, it : LibC::UShort*, v : LibC::UShort) : LibC::UShort*
-  fun im_vector_im_draw_idx_pop_back = ImVector_ImDrawIdx_pop_back(self : ImVector*)
-  fun im_vector_im_draw_idx_push_back = ImVector_ImDrawIdx_push_back(self : ImVector*, v : LibC::UShort)
-  fun im_vector_im_draw_idx_push_front = ImVector_ImDrawIdx_push_front(self : ImVector*, v : LibC::UShort)
-  fun im_vector_im_draw_idx_reserve = ImVector_ImDrawIdx_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_draw_idx_resize = ImVector_ImDrawIdx_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_draw_idx_resize_t = ImVector_ImDrawIdx_resizeT(self : ImVector*, new_size : LibC::Int, v : LibC::UShort)
-  fun im_vector_im_draw_idx_size = ImVector_ImDrawIdx_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_idx_size_in_bytes = ImVector_ImDrawIdx_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_idx_swap = ImVector_ImDrawIdx_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_draw_vert_im_vector_im_draw_vert = ImVector_ImDrawVert_ImVector_ImDrawVert : ImVector*
-  fun im_vector_im_draw_vert_im_vector_im_draw_vert_vector = ImVector_ImDrawVert_ImVector_ImDrawVertVector(src : ImVector) : ImVector*
-  fun im_vector_im_draw_vert__grow_capacity = ImVector_ImDrawVert__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_draw_vert_back = ImVector_ImDrawVert_back(self : ImVector*) : ImDrawVert*
-  fun im_vector_im_draw_vert_begin = ImVector_ImDrawVert_begin(self : ImVector*) : ImDrawVert*
-  fun im_vector_im_draw_vert_capacity = ImVector_ImDrawVert_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_vert_clear = ImVector_ImDrawVert_clear(self : ImVector*)
-  fun im_vector_im_draw_vert_destroy = ImVector_ImDrawVert_destroy(self : ImVector*)
-  fun im_vector_im_draw_vert_empty = ImVector_ImDrawVert_empty(self : ImVector*) : Bool
-  fun im_vector_im_draw_vert_end = ImVector_ImDrawVert_end(self : ImVector*) : ImDrawVert*
-  fun im_vector_im_draw_vert_erase = ImVector_ImDrawVert_erase(self : ImVector*, it : ImDrawVert*) : ImDrawVert*
-  fun im_vector_im_draw_vert_erase_t_ptr = ImVector_ImDrawVert_eraseTPtr(self : ImVector*, it : ImDrawVert*, it_last : ImDrawVert*) : ImDrawVert*
-  fun im_vector_im_draw_vert_erase_unsorted = ImVector_ImDrawVert_erase_unsorted(self : ImVector*, it : ImDrawVert*) : ImDrawVert*
-  fun im_vector_im_draw_vert_front = ImVector_ImDrawVert_front(self : ImVector*) : ImDrawVert*
-  fun im_vector_im_draw_vert_index_from_ptr = ImVector_ImDrawVert_index_from_ptr(self : ImVector*, it : ImDrawVert*) : LibC::Int
-  fun im_vector_im_draw_vert_insert = ImVector_ImDrawVert_insert(self : ImVector*, it : ImDrawVert*, v : ImDrawVert) : ImDrawVert*
-  fun im_vector_im_draw_vert_pop_back = ImVector_ImDrawVert_pop_back(self : ImVector*)
-  fun im_vector_im_draw_vert_push_back = ImVector_ImDrawVert_push_back(self : ImVector*, v : ImDrawVert)
-  fun im_vector_im_draw_vert_push_front = ImVector_ImDrawVert_push_front(self : ImVector*, v : ImDrawVert)
-  fun im_vector_im_draw_vert_reserve = ImVector_ImDrawVert_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_draw_vert_resize = ImVector_ImDrawVert_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_draw_vert_resize_t = ImVector_ImDrawVert_resizeT(self : ImVector*, new_size : LibC::Int, v : ImDrawVert)
-  fun im_vector_im_draw_vert_size = ImVector_ImDrawVert_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_vert_size_in_bytes = ImVector_ImDrawVert_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_draw_vert_swap = ImVector_ImDrawVert_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_font_config_im_vector_im_font_config = ImVector_ImFontConfig_ImVector_ImFontConfig : ImVector*
-  fun im_vector_im_font_config_im_vector_im_font_config_vector = ImVector_ImFontConfig_ImVector_ImFontConfigVector(src : ImVector) : ImVector*
-  fun im_vector_im_font_config__grow_capacity = ImVector_ImFontConfig__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_font_config_back = ImVector_ImFontConfig_back(self : ImVector*) : ImFontConfig*
-  fun im_vector_im_font_config_begin = ImVector_ImFontConfig_begin(self : ImVector*) : ImFontConfig*
-  fun im_vector_im_font_config_capacity = ImVector_ImFontConfig_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_font_config_clear = ImVector_ImFontConfig_clear(self : ImVector*)
-  fun im_vector_im_font_config_destroy = ImVector_ImFontConfig_destroy(self : ImVector*)
-  fun im_vector_im_font_config_empty = ImVector_ImFontConfig_empty(self : ImVector*) : Bool
-  fun im_vector_im_font_config_end = ImVector_ImFontConfig_end(self : ImVector*) : ImFontConfig*
-  fun im_vector_im_font_config_erase = ImVector_ImFontConfig_erase(self : ImVector*, it : ImFontConfig*) : ImFontConfig*
-  fun im_vector_im_font_config_erase_t_ptr = ImVector_ImFontConfig_eraseTPtr(self : ImVector*, it : ImFontConfig*, it_last : ImFontConfig*) : ImFontConfig*
-  fun im_vector_im_font_config_erase_unsorted = ImVector_ImFontConfig_erase_unsorted(self : ImVector*, it : ImFontConfig*) : ImFontConfig*
-  fun im_vector_im_font_config_front = ImVector_ImFontConfig_front(self : ImVector*) : ImFontConfig*
-  fun im_vector_im_font_config_index_from_ptr = ImVector_ImFontConfig_index_from_ptr(self : ImVector*, it : ImFontConfig*) : LibC::Int
-  fun im_vector_im_font_config_insert = ImVector_ImFontConfig_insert(self : ImVector*, it : ImFontConfig*, v : ImFontConfig) : ImFontConfig*
-  fun im_vector_im_font_config_pop_back = ImVector_ImFontConfig_pop_back(self : ImVector*)
-  fun im_vector_im_font_config_push_back = ImVector_ImFontConfig_push_back(self : ImVector*, v : ImFontConfig)
-  fun im_vector_im_font_config_push_front = ImVector_ImFontConfig_push_front(self : ImVector*, v : ImFontConfig)
-  fun im_vector_im_font_config_reserve = ImVector_ImFontConfig_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_font_config_resize = ImVector_ImFontConfig_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_font_config_resize_t = ImVector_ImFontConfig_resizeT(self : ImVector*, new_size : LibC::Int, v : ImFontConfig)
-  fun im_vector_im_font_config_size = ImVector_ImFontConfig_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_font_config_size_in_bytes = ImVector_ImFontConfig_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_font_config_swap = ImVector_ImFontConfig_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_font_glyph_im_vector_im_font_glyph = ImVector_ImFontGlyph_ImVector_ImFontGlyph : ImVector*
-  fun im_vector_im_font_glyph_im_vector_im_font_glyph_vector = ImVector_ImFontGlyph_ImVector_ImFontGlyphVector(src : ImVector) : ImVector*
-  fun im_vector_im_font_glyph__grow_capacity = ImVector_ImFontGlyph__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_font_glyph_back = ImVector_ImFontGlyph_back(self : ImVector*) : ImFontGlyph*
-  fun im_vector_im_font_glyph_begin = ImVector_ImFontGlyph_begin(self : ImVector*) : ImFontGlyph*
-  fun im_vector_im_font_glyph_capacity = ImVector_ImFontGlyph_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_font_glyph_clear = ImVector_ImFontGlyph_clear(self : ImVector*)
-  fun im_vector_im_font_glyph_destroy = ImVector_ImFontGlyph_destroy(self : ImVector*)
-  fun im_vector_im_font_glyph_empty = ImVector_ImFontGlyph_empty(self : ImVector*) : Bool
-  fun im_vector_im_font_glyph_end = ImVector_ImFontGlyph_end(self : ImVector*) : ImFontGlyph*
-  fun im_vector_im_font_glyph_erase = ImVector_ImFontGlyph_erase(self : ImVector*, it : ImFontGlyph*) : ImFontGlyph*
-  fun im_vector_im_font_glyph_erase_t_ptr = ImVector_ImFontGlyph_eraseTPtr(self : ImVector*, it : ImFontGlyph*, it_last : ImFontGlyph*) : ImFontGlyph*
-  fun im_vector_im_font_glyph_erase_unsorted = ImVector_ImFontGlyph_erase_unsorted(self : ImVector*, it : ImFontGlyph*) : ImFontGlyph*
-  fun im_vector_im_font_glyph_front = ImVector_ImFontGlyph_front(self : ImVector*) : ImFontGlyph*
-  fun im_vector_im_font_glyph_index_from_ptr = ImVector_ImFontGlyph_index_from_ptr(self : ImVector*, it : ImFontGlyph*) : LibC::Int
-  fun im_vector_im_font_glyph_insert = ImVector_ImFontGlyph_insert(self : ImVector*, it : ImFontGlyph*, v : ImFontGlyph) : ImFontGlyph*
-  fun im_vector_im_font_glyph_pop_back = ImVector_ImFontGlyph_pop_back(self : ImVector*)
-  fun im_vector_im_font_glyph_push_back = ImVector_ImFontGlyph_push_back(self : ImVector*, v : ImFontGlyph)
-  fun im_vector_im_font_glyph_push_front = ImVector_ImFontGlyph_push_front(self : ImVector*, v : ImFontGlyph)
-  fun im_vector_im_font_glyph_reserve = ImVector_ImFontGlyph_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_font_glyph_resize = ImVector_ImFontGlyph_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_font_glyph_resize_t = ImVector_ImFontGlyph_resizeT(self : ImVector*, new_size : LibC::Int, v : ImFontGlyph)
-  fun im_vector_im_font_glyph_size = ImVector_ImFontGlyph_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_font_glyph_size_in_bytes = ImVector_ImFontGlyph_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_font_glyph_swap = ImVector_ImFontGlyph_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_font_ptr_im_vector_im_font_ptr = ImVector_ImFontPtr_ImVector_ImFontPtr : ImVector*
-  fun im_vector_im_font_ptr_im_vector_im_font_ptr_vector = ImVector_ImFontPtr_ImVector_ImFontPtrVector(src : ImVector) : ImVector*
-  fun im_vector_im_font_ptr__grow_capacity = ImVector_ImFontPtr__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_font_ptr_back = ImVector_ImFontPtr_back(self : ImVector*) : ImFont**
-  fun im_vector_im_font_ptr_begin = ImVector_ImFontPtr_begin(self : ImVector*) : ImFont**
-  fun im_vector_im_font_ptr_capacity = ImVector_ImFontPtr_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_font_ptr_clear = ImVector_ImFontPtr_clear(self : ImVector*)
-  fun im_vector_im_font_ptr_destroy = ImVector_ImFontPtr_destroy(self : ImVector*)
-  fun im_vector_im_font_ptr_empty = ImVector_ImFontPtr_empty(self : ImVector*) : Bool
-  fun im_vector_im_font_ptr_end = ImVector_ImFontPtr_end(self : ImVector*) : ImFont**
-  fun im_vector_im_font_ptr_erase = ImVector_ImFontPtr_erase(self : ImVector*, it : ImFont**) : ImFont**
-  fun im_vector_im_font_ptr_erase_t_ptr = ImVector_ImFontPtr_eraseTPtr(self : ImVector*, it : ImFont**, it_last : ImFont**) : ImFont**
-  fun im_vector_im_font_ptr_erase_unsorted = ImVector_ImFontPtr_erase_unsorted(self : ImVector*, it : ImFont**) : ImFont**
-  fun im_vector_im_font_ptr_front = ImVector_ImFontPtr_front(self : ImVector*) : ImFont**
-  fun im_vector_im_font_ptr_index_from_ptr = ImVector_ImFontPtr_index_from_ptr(self : ImVector*, it : ImFont**) : LibC::Int
-  fun im_vector_im_font_ptr_insert = ImVector_ImFontPtr_insert(self : ImVector*, it : ImFont**, v : ImFont*) : ImFont**
-  fun im_vector_im_font_ptr_pop_back = ImVector_ImFontPtr_pop_back(self : ImVector*)
-  fun im_vector_im_font_ptr_push_back = ImVector_ImFontPtr_push_back(self : ImVector*, v : ImFont*)
-  fun im_vector_im_font_ptr_push_front = ImVector_ImFontPtr_push_front(self : ImVector*, v : ImFont*)
-  fun im_vector_im_font_ptr_reserve = ImVector_ImFontPtr_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_font_ptr_resize = ImVector_ImFontPtr_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_font_ptr_resize_t = ImVector_ImFontPtr_resizeT(self : ImVector*, new_size : LibC::Int, v : ImFont*)
-  fun im_vector_im_font_ptr_size = ImVector_ImFontPtr_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_font_ptr_size_in_bytes = ImVector_ImFontPtr_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_font_ptr_swap = ImVector_ImFontPtr_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_texture_id_im_vector_im_texture_id = ImVector_ImTextureID_ImVector_ImTextureID : ImVector*
-  fun im_vector_im_texture_id_im_vector_im_texture_id_vector = ImVector_ImTextureID_ImVector_ImTextureIDVector(src : ImVector) : ImVector*
-  fun im_vector_im_texture_id__grow_capacity = ImVector_ImTextureID__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_texture_id_back = ImVector_ImTextureID_back(self : ImVector*) : Void**
-  fun im_vector_im_texture_id_begin = ImVector_ImTextureID_begin(self : ImVector*) : Void**
-  fun im_vector_im_texture_id_capacity = ImVector_ImTextureID_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_texture_id_clear = ImVector_ImTextureID_clear(self : ImVector*)
-  fun im_vector_im_texture_id_destroy = ImVector_ImTextureID_destroy(self : ImVector*)
-  fun im_vector_im_texture_id_empty = ImVector_ImTextureID_empty(self : ImVector*) : Bool
-  fun im_vector_im_texture_id_end = ImVector_ImTextureID_end(self : ImVector*) : Void**
-  fun im_vector_im_texture_id_erase = ImVector_ImTextureID_erase(self : ImVector*, it : Void*) : Void**
-  fun im_vector_im_texture_id_erase_t_ptr = ImVector_ImTextureID_eraseTPtr(self : ImVector*, it : Void*, it_last : Void*) : Void*
-  fun im_vector_im_texture_id_erase_unsorted = ImVector_ImTextureID_erase_unsorted(self : ImVector*, it : Void*) : Void*
-  fun im_vector_im_texture_id_front = ImVector_ImTextureID_front(self : ImVector*) : Void*
-  fun im_vector_im_texture_id_index_from_ptr = ImVector_ImTextureID_index_from_ptr(self : ImVector*, it : Void*) : LibC::Int
-  fun im_vector_im_texture_id_insert = ImVector_ImTextureID_insert(self : ImVector*, it : Void*, v : Void*) : Void*
-  fun im_vector_im_texture_id_pop_back = ImVector_ImTextureID_pop_back(self : ImVector*)
-  fun im_vector_im_texture_id_push_back = ImVector_ImTextureID_push_back(self : ImVector*, v : Void*)
-  fun im_vector_im_texture_id_push_front = ImVector_ImTextureID_push_front(self : ImVector*, v : Void*)
-  fun im_vector_im_texture_id_reserve = ImVector_ImTextureID_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_texture_id_resize = ImVector_ImTextureID_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_texture_id_resize_t = ImVector_ImTextureID_resizeT(self : ImVector*, new_size : LibC::Int, v : Void*)
-  fun im_vector_im_texture_id_size = ImVector_ImTextureID_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_texture_id_size_in_bytes = ImVector_ImTextureID_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_texture_id_swap = ImVector_ImTextureID_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_u32_im_vector_im_u32 = ImVector_ImU32_ImVector_ImU32 : ImVector*
-  fun im_vector_im_u32_im_vector_im_u32_vector = ImVector_ImU32_ImVector_ImU32Vector(src : ImVector) : ImVector*
-  fun im_vector_im_u32__grow_capacity = ImVector_ImU32__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_u32_back = ImVector_ImU32_back(self : ImVector*) : LibC::UInt*
-  fun im_vector_im_u32_begin = ImVector_ImU32_begin(self : ImVector*) : LibC::UInt*
-  fun im_vector_im_u32_capacity = ImVector_ImU32_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_u32_clear = ImVector_ImU32_clear(self : ImVector*)
-  fun im_vector_im_u32_destroy = ImVector_ImU32_destroy(self : ImVector*)
-  fun im_vector_im_u32_empty = ImVector_ImU32_empty(self : ImVector*) : Bool
-  fun im_vector_im_u32_end = ImVector_ImU32_end(self : ImVector*) : LibC::UInt*
-  fun im_vector_im_u32_erase = ImVector_ImU32_erase(self : ImVector*, it : LibC::UInt*) : LibC::UInt*
-  fun im_vector_im_u32_erase_t_ptr = ImVector_ImU32_eraseTPtr(self : ImVector*, it : LibC::UInt*, it_last : LibC::UInt*) : LibC::UInt*
-  fun im_vector_im_u32_erase_unsorted = ImVector_ImU32_erase_unsorted(self : ImVector*, it : LibC::UInt*) : LibC::UInt*
-  fun im_vector_im_u32_front = ImVector_ImU32_front(self : ImVector*) : LibC::UInt*
-  fun im_vector_im_u32_index_from_ptr = ImVector_ImU32_index_from_ptr(self : ImVector*, it : LibC::UInt*) : LibC::Int
-  fun im_vector_im_u32_insert = ImVector_ImU32_insert(self : ImVector*, it : LibC::UInt*, v : LibC::UInt) : LibC::UInt*
-  fun im_vector_im_u32_pop_back = ImVector_ImU32_pop_back(self : ImVector*)
-  fun im_vector_im_u32_push_back = ImVector_ImU32_push_back(self : ImVector*, v : LibC::UInt)
-  fun im_vector_im_u32_push_front = ImVector_ImU32_push_front(self : ImVector*, v : LibC::UInt)
-  fun im_vector_im_u32_reserve = ImVector_ImU32_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_u32_resize = ImVector_ImU32_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_u32_resize_t = ImVector_ImU32_resizeT(self : ImVector*, new_size : LibC::Int, v : LibC::UInt)
-  fun im_vector_im_u32_size = ImVector_ImU32_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_u32_size_in_bytes = ImVector_ImU32_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_u32_swap = ImVector_ImU32_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_vec2_im_vector_im_vec2 = ImVector_ImVec2_ImVector_ImVec2 : ImVector*
-  fun im_vector_im_vec2_im_vector_im_vec2_vector = ImVector_ImVec2_ImVector_ImVec2Vector(src : ImVector) : ImVector*
-  fun im_vector_im_vec2__grow_capacity = ImVector_ImVec2__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_vec2_back = ImVector_ImVec2_back(self : ImVector*) : ImVec2*
-  fun im_vector_im_vec2_begin = ImVector_ImVec2_begin(self : ImVector*) : ImVec2*
-  fun im_vector_im_vec2_capacity = ImVector_ImVec2_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_vec2_clear = ImVector_ImVec2_clear(self : ImVector*)
-  fun im_vector_im_vec2_destroy = ImVector_ImVec2_destroy(self : ImVector*)
-  fun im_vector_im_vec2_empty = ImVector_ImVec2_empty(self : ImVector*) : Bool
-  fun im_vector_im_vec2_end = ImVector_ImVec2_end(self : ImVector*) : ImVec2*
-  fun im_vector_im_vec2_erase = ImVector_ImVec2_erase(self : ImVector*, it : ImVec2*) : ImVec2*
-  fun im_vector_im_vec2_erase_t_ptr = ImVector_ImVec2_eraseTPtr(self : ImVector*, it : ImVec2*, it_last : ImVec2*) : ImVec2*
-  fun im_vector_im_vec2_erase_unsorted = ImVector_ImVec2_erase_unsorted(self : ImVector*, it : ImVec2*) : ImVec2*
-  fun im_vector_im_vec2_front = ImVector_ImVec2_front(self : ImVector*) : ImVec2*
-  fun im_vector_im_vec2_index_from_ptr = ImVector_ImVec2_index_from_ptr(self : ImVector*, it : ImVec2*) : LibC::Int
-  fun im_vector_im_vec2_insert = ImVector_ImVec2_insert(self : ImVector*, it : ImVec2*, v : ImVec2) : ImVec2*
-  fun im_vector_im_vec2_pop_back = ImVector_ImVec2_pop_back(self : ImVector*)
-  fun im_vector_im_vec2_push_back = ImVector_ImVec2_push_back(self : ImVector*, v : ImVec2)
-  fun im_vector_im_vec2_push_front = ImVector_ImVec2_push_front(self : ImVector*, v : ImVec2)
-  fun im_vector_im_vec2_reserve = ImVector_ImVec2_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_vec2_resize = ImVector_ImVec2_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_vec2_resize_t = ImVector_ImVec2_resizeT(self : ImVector*, new_size : LibC::Int, v : ImVec2)
-  fun im_vector_im_vec2_size = ImVector_ImVec2_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_vec2_size_in_bytes = ImVector_ImVec2_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_vec2_swap = ImVector_ImVec2_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_im_vec4_im_vector_im_vec4 = ImVector_ImVec4_ImVector_ImVec4 : ImVector*
-  fun im_vector_im_vec4_im_vector_im_vec4_vector = ImVector_ImVec4_ImVector_ImVec4Vector(src : ImVector) : ImVector*
-  fun im_vector_im_vec4__grow_capacity = ImVector_ImVec4__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_vec4_back = ImVector_ImVec4_back(self : ImVector*) : ImVec4*
-  fun im_vector_im_vec4_begin = ImVector_ImVec4_begin(self : ImVector*) : ImVec4*
-  fun im_vector_im_vec4_capacity = ImVector_ImVec4_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_vec4_clear = ImVector_ImVec4_clear(self : ImVector*)
-  fun im_vector_im_vec4_destroy = ImVector_ImVec4_destroy(self : ImVector*)
-  fun im_vector_im_vec4_empty = ImVector_ImVec4_empty(self : ImVector*) : Bool
-  fun im_vector_im_vec4_end = ImVector_ImVec4_end(self : ImVector*) : ImVec4*
-  fun im_vector_im_vec4_erase = ImVector_ImVec4_erase(self : ImVector*, it : ImVec4*) : ImVec4*
-  fun im_vector_im_vec4_erase_t_ptr = ImVector_ImVec4_eraseTPtr(self : ImVector*, it : ImVec4*, it_last : ImVec4*) : ImVec4*
-  fun im_vector_im_vec4_erase_unsorted = ImVector_ImVec4_erase_unsorted(self : ImVector*, it : ImVec4*) : ImVec4*
-  fun im_vector_im_vec4_front = ImVector_ImVec4_front(self : ImVector*) : ImVec4*
-  fun im_vector_im_vec4_index_from_ptr = ImVector_ImVec4_index_from_ptr(self : ImVector*, it : ImVec4*) : LibC::Int
-  fun im_vector_im_vec4_insert = ImVector_ImVec4_insert(self : ImVector*, it : ImVec4*, v : ImVec4) : ImVec4*
-  fun im_vector_im_vec4_pop_back = ImVector_ImVec4_pop_back(self : ImVector*)
-  fun im_vector_im_vec4_push_back = ImVector_ImVec4_push_back(self : ImVector*, v : ImVec4)
-  fun im_vector_im_vec4_push_front = ImVector_ImVec4_push_front(self : ImVector*, v : ImVec4)
-  fun im_vector_im_vec4_reserve = ImVector_ImVec4_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_vec4_resize = ImVector_ImVec4_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_vec4_resize_t = ImVector_ImVec4_resizeT(self : ImVector*, new_size : LibC::Int, v : ImVec4)
-  fun im_vector_im_vec4_size = ImVector_ImVec4_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_vec4_size_in_bytes = ImVector_ImVec4_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_vec4_swap = ImVector_ImVec4_swap(self : ImVector*, rhs : ImVector)
   fun im_vector_im_vector = ImVector_ImVector : ImVector*
   fun im_vector_im_vector_vector = ImVector_ImVectorVector(src : ImVector) : ImVector*
-  fun im_vector_im_wchar_im_vector_im_wchar = ImVector_ImWchar_ImVector_ImWchar : ImVector*
-  fun im_vector_im_wchar_im_vector_im_wchar_vector = ImVector_ImWchar_ImVector_ImWcharVector(src : ImVector) : ImVector*
-  fun im_vector_im_wchar__grow_capacity = ImVector_ImWchar__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_im_wchar_back = ImVector_ImWchar_back(self : ImVector*) : LibC::UShort*
-  fun im_vector_im_wchar_begin = ImVector_ImWchar_begin(self : ImVector*) : LibC::UShort*
-  fun im_vector_im_wchar_capacity = ImVector_ImWchar_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_im_wchar_clear = ImVector_ImWchar_clear(self : ImVector*)
-  fun im_vector_im_wchar_contains = ImVector_ImWchar_contains(self : ImVector*, v : LibC::UShort) : Bool
-  fun im_vector_im_wchar_destroy = ImVector_ImWchar_destroy(self : ImVector*)
-  fun im_vector_im_wchar_empty = ImVector_ImWchar_empty(self : ImVector*) : Bool
-  fun im_vector_im_wchar_end = ImVector_ImWchar_end(self : ImVector*) : LibC::UShort*
-  fun im_vector_im_wchar_erase = ImVector_ImWchar_erase(self : ImVector*, it : LibC::UShort*) : LibC::UShort*
-  fun im_vector_im_wchar_erase_t_ptr = ImVector_ImWchar_eraseTPtr(self : ImVector*, it : LibC::UShort*, it_last : LibC::UShort*) : LibC::UShort*
-  fun im_vector_im_wchar_erase_unsorted = ImVector_ImWchar_erase_unsorted(self : ImVector*, it : LibC::UShort*) : LibC::UShort*
-  fun im_vector_im_wchar_front = ImVector_ImWchar_front(self : ImVector*) : LibC::UShort*
-  fun im_vector_im_wchar_index_from_ptr = ImVector_ImWchar_index_from_ptr(self : ImVector*, it : LibC::UShort*) : LibC::Int
-  fun im_vector_im_wchar_insert = ImVector_ImWchar_insert(self : ImVector*, it : LibC::UShort*, v : LibC::UShort) : LibC::UShort*
-  fun im_vector_im_wchar_pop_back = ImVector_ImWchar_pop_back(self : ImVector*)
-  fun im_vector_im_wchar_push_back = ImVector_ImWchar_push_back(self : ImVector*, v : LibC::UShort)
-  fun im_vector_im_wchar_push_front = ImVector_ImWchar_push_front(self : ImVector*, v : LibC::UShort)
-  fun im_vector_im_wchar_reserve = ImVector_ImWchar_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_im_wchar_resize = ImVector_ImWchar_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_im_wchar_resize_t = ImVector_ImWchar_resizeT(self : ImVector*, new_size : LibC::Int, v : LibC::UShort)
-  fun im_vector_im_wchar_size = ImVector_ImWchar_size(self : ImVector*) : LibC::Int
-  fun im_vector_im_wchar_size_in_bytes = ImVector_ImWchar_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_im_wchar_swap = ImVector_ImWchar_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_pair_im_vector_pair = ImVector_Pair_ImVector_Pair : ImVector*
-  fun im_vector_pair_im_vector_pair_vector = ImVector_Pair_ImVector_PairVector(src : ImVector) : ImVector*
-  fun im_vector_pair__grow_capacity = ImVector_Pair__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_pair_back = ImVector_Pair_back(self : ImVector*) : Pair*
-  fun im_vector_pair_begin = ImVector_Pair_begin(self : ImVector*) : Pair*
-  fun im_vector_pair_capacity = ImVector_Pair_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_pair_clear = ImVector_Pair_clear(self : ImVector*)
-  fun im_vector_pair_destroy = ImVector_Pair_destroy(self : ImVector*)
-  fun im_vector_pair_empty = ImVector_Pair_empty(self : ImVector*) : Bool
-  fun im_vector_pair_end = ImVector_Pair_end(self : ImVector*) : Pair*
-  fun im_vector_pair_erase = ImVector_Pair_erase(self : ImVector*, it : Pair*) : Pair*
-  fun im_vector_pair_erase_t_ptr = ImVector_Pair_eraseTPtr(self : ImVector*, it : Pair*, it_last : Pair*) : Pair*
-  fun im_vector_pair_erase_unsorted = ImVector_Pair_erase_unsorted(self : ImVector*, it : Pair*) : Pair*
-  fun im_vector_pair_front = ImVector_Pair_front(self : ImVector*) : Pair*
-  fun im_vector_pair_index_from_ptr = ImVector_Pair_index_from_ptr(self : ImVector*, it : Pair*) : LibC::Int
-  fun im_vector_pair_insert = ImVector_Pair_insert(self : ImVector*, it : Pair*, v : Pair) : Pair*
-  fun im_vector_pair_pop_back = ImVector_Pair_pop_back(self : ImVector*)
-  fun im_vector_pair_push_back = ImVector_Pair_push_back(self : ImVector*, v : Pair)
-  fun im_vector_pair_push_front = ImVector_Pair_push_front(self : ImVector*, v : Pair)
-  fun im_vector_pair_reserve = ImVector_Pair_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_pair_resize = ImVector_Pair_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_pair_resize_t = ImVector_Pair_resizeT(self : ImVector*, new_size : LibC::Int, v : Pair)
-  fun im_vector_pair_size = ImVector_Pair_size(self : ImVector*) : LibC::Int
-  fun im_vector_pair_size_in_bytes = ImVector_Pair_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_pair_swap = ImVector_Pair_swap(self : ImVector*, rhs : ImVector)
-  fun im_vector_text_range_im_vector_text_range = ImVector_TextRange_ImVector_TextRange : ImVector*
-  fun im_vector_text_range_im_vector_text_range_vector = ImVector_TextRange_ImVector_TextRangeVector(src : ImVector) : ImVector*
-  fun im_vector_text_range__grow_capacity = ImVector_TextRange__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_text_range_back = ImVector_TextRange_back(self : ImVector*) : TextRange*
-  fun im_vector_text_range_begin = ImVector_TextRange_begin(self : ImVector*) : TextRange*
-  fun im_vector_text_range_capacity = ImVector_TextRange_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_text_range_clear = ImVector_TextRange_clear(self : ImVector*)
-  fun im_vector_text_range_destroy = ImVector_TextRange_destroy(self : ImVector*)
-  fun im_vector_text_range_empty = ImVector_TextRange_empty(self : ImVector*) : Bool
-  fun im_vector_text_range_end = ImVector_TextRange_end(self : ImVector*) : TextRange*
-  fun im_vector_text_range_erase = ImVector_TextRange_erase(self : ImVector*, it : TextRange*) : TextRange*
-  fun im_vector_text_range_erase_t_ptr = ImVector_TextRange_eraseTPtr(self : ImVector*, it : TextRange*, it_last : TextRange*) : TextRange*
-  fun im_vector_text_range_erase_unsorted = ImVector_TextRange_erase_unsorted(self : ImVector*, it : TextRange*) : TextRange*
-  fun im_vector_text_range_front = ImVector_TextRange_front(self : ImVector*) : TextRange*
-  fun im_vector_text_range_index_from_ptr = ImVector_TextRange_index_from_ptr(self : ImVector*, it : TextRange*) : LibC::Int
-  fun im_vector_text_range_insert = ImVector_TextRange_insert(self : ImVector*, it : TextRange*, v : TextRange) : TextRange*
-  fun im_vector_text_range_pop_back = ImVector_TextRange_pop_back(self : ImVector*)
-  fun im_vector_text_range_push_back = ImVector_TextRange_push_back(self : ImVector*, v : TextRange)
-  fun im_vector_text_range_push_front = ImVector_TextRange_push_front(self : ImVector*, v : TextRange)
-  fun im_vector_text_range_reserve = ImVector_TextRange_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_text_range_resize = ImVector_TextRange_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_text_range_resize_t = ImVector_TextRange_resizeT(self : ImVector*, new_size : LibC::Int, v : TextRange)
-  fun im_vector_text_range_size = ImVector_TextRange_size(self : ImVector*) : LibC::Int
-  fun im_vector_text_range_size_in_bytes = ImVector_TextRange_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_text_range_swap = ImVector_TextRange_swap(self : ImVector*, rhs : ImVector)
   fun im_vector__grow_capacity = ImVector__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
   fun im_vector_back = ImVector_back(self : ImVector*) : Void*
   fun im_vector_begin = ImVector_begin(self : ImVector*) : Void*
   fun im_vector_capacity = ImVector_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_char_im_vector_char = ImVector_char_ImVector_char : ImVector*
-  fun im_vector_char_im_vector_char_vector = ImVector_char_ImVector_charVector(src : ImVector) : ImVector*
-  fun im_vector_char__grow_capacity = ImVector_char__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_char_back = ImVector_char_back(self : ImVector*) : LibC::Char*
-  fun im_vector_char_begin = ImVector_char_begin(self : ImVector*) : LibC::Char*
-  fun im_vector_char_capacity = ImVector_char_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_char_clear = ImVector_char_clear(self : ImVector*)
-  fun im_vector_char_contains = ImVector_char_contains(self : ImVector*, v : LibC::Char) : Bool
-  fun im_vector_char_destroy = ImVector_char_destroy(self : ImVector*)
-  fun im_vector_char_empty = ImVector_char_empty(self : ImVector*) : Bool
-  fun im_vector_char_end = ImVector_char_end(self : ImVector*) : LibC::Char*
-  fun im_vector_char_erase = ImVector_char_erase(self : ImVector*, it : LibC::Char*) : LibC::Char*
-  fun im_vector_char_erase_t_ptr = ImVector_char_eraseTPtr(self : ImVector*, it : LibC::Char*, it_last : LibC::Char*) : LibC::Char*
-  fun im_vector_char_erase_unsorted = ImVector_char_erase_unsorted(self : ImVector*, it : LibC::Char*) : LibC::Char*
-  fun im_vector_char_front = ImVector_char_front(self : ImVector*) : LibC::Char*
-  fun im_vector_char_index_from_ptr = ImVector_char_index_from_ptr(self : ImVector*, it : LibC::Char*) : LibC::Int
-  fun im_vector_char_insert = ImVector_char_insert(self : ImVector*, it : LibC::Char*, v : LibC::Char) : LibC::Char*
-  fun im_vector_char_pop_back = ImVector_char_pop_back(self : ImVector*)
-  fun im_vector_char_push_back = ImVector_char_push_back(self : ImVector*, v : LibC::Char)
-  fun im_vector_char_push_front = ImVector_char_push_front(self : ImVector*, v : LibC::Char)
-  fun im_vector_char_reserve = ImVector_char_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_char_resize = ImVector_char_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_char_resize_t = ImVector_char_resizeT(self : ImVector*, new_size : LibC::Int, v : LibC::Char)
-  fun im_vector_char_size = ImVector_char_size(self : ImVector*) : LibC::Int
-  fun im_vector_char_size_in_bytes = ImVector_char_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_char_swap = ImVector_char_swap(self : ImVector*, rhs : ImVector)
   fun im_vector_clear = ImVector_clear(self : ImVector*)
+  fun im_vector_contains = ImVector_contains(self : ImVector*, v : Void*) : Bool
   fun im_vector_destroy = ImVector_destroy(self : ImVector*)
   fun im_vector_empty = ImVector_empty(self : ImVector*) : Bool
   fun im_vector_end = ImVector_end(self : ImVector*) : Void*
   fun im_vector_erase = ImVector_erase(self : ImVector*, it : Void*) : Void*
   fun im_vector_erase_t_ptr = ImVector_eraseTPtr(self : ImVector*, it : Void*, it_last : Void*) : Void*
   fun im_vector_erase_unsorted = ImVector_erase_unsorted(self : ImVector*, it : Void*) : Void*
-  fun im_vector_float_im_vector_float = ImVector_float_ImVector_float : ImVector*
-  fun im_vector_float_im_vector_float_vector = ImVector_float_ImVector_floatVector(src : ImVector) : ImVector*
-  fun im_vector_float__grow_capacity = ImVector_float__grow_capacity(self : ImVector*, sz : LibC::Int) : LibC::Int
-  fun im_vector_float_back = ImVector_float_back(self : ImVector*) : LibC::Float*
-  fun im_vector_float_begin = ImVector_float_begin(self : ImVector*) : LibC::Float*
-  fun im_vector_float_capacity = ImVector_float_capacity(self : ImVector*) : LibC::Int
-  fun im_vector_float_clear = ImVector_float_clear(self : ImVector*)
-  fun im_vector_float_contains = ImVector_float_contains(self : ImVector*, v : LibC::Float) : Bool
-  fun im_vector_float_destroy = ImVector_float_destroy(self : ImVector*)
-  fun im_vector_float_empty = ImVector_float_empty(self : ImVector*) : Bool
-  fun im_vector_float_end = ImVector_float_end(self : ImVector*) : LibC::Float*
-  fun im_vector_float_erase = ImVector_float_erase(self : ImVector*, it : LibC::Float*) : LibC::Float*
-  fun im_vector_float_erase_t_ptr = ImVector_float_eraseTPtr(self : ImVector*, it : LibC::Float*, it_last : LibC::Float*) : LibC::Float*
-  fun im_vector_float_erase_unsorted = ImVector_float_erase_unsorted(self : ImVector*, it : LibC::Float*) : LibC::Float*
-  fun im_vector_float_front = ImVector_float_front(self : ImVector*) : LibC::Float*
-  fun im_vector_float_index_from_ptr = ImVector_float_index_from_ptr(self : ImVector*, it : LibC::Float*) : LibC::Int
-  fun im_vector_float_insert = ImVector_float_insert(self : ImVector*, it : LibC::Float*, v : LibC::Float) : LibC::Float*
-  fun im_vector_float_pop_back = ImVector_float_pop_back(self : ImVector*)
-  fun im_vector_float_push_back = ImVector_float_push_back(self : ImVector*, v : LibC::Float)
-  fun im_vector_float_push_front = ImVector_float_push_front(self : ImVector*, v : LibC::Float)
-  fun im_vector_float_reserve = ImVector_float_reserve(self : ImVector*, new_capacity : LibC::Int)
-  fun im_vector_float_resize = ImVector_float_resize(self : ImVector*, new_size : LibC::Int)
-  fun im_vector_float_resize_t = ImVector_float_resizeT(self : ImVector*, new_size : LibC::Int, v : LibC::Float)
-  fun im_vector_float_size = ImVector_float_size(self : ImVector*) : LibC::Int
-  fun im_vector_float_size_in_bytes = ImVector_float_size_in_bytes(self : ImVector*) : LibC::Int
-  fun im_vector_float_swap = ImVector_float_swap(self : ImVector*, rhs : ImVector)
+  fun im_vector_find = ImVector_find(self : ImVector*, v : Void*) : Void*
+  fun im_vector_find_erase = ImVector_find_erase(self : ImVector*, v : Void*) : Bool
+  fun im_vector_find_erase_unsorted = ImVector_find_erase_unsorted(self : ImVector*, v : Void*) : Bool
   fun im_vector_front = ImVector_front(self : ImVector*) : Void*
   fun im_vector_index_from_ptr = ImVector_index_from_ptr(self : ImVector*, it : Void*) : LibC::Int
   fun im_vector_insert = ImVector_insert(self : ImVector*, it : Void*, v : Void*) : Void*
@@ -1405,20 +1013,10 @@ lib LibImGui
   fun im_vector_reserve = ImVector_reserve(self : ImVector*, new_capacity : LibC::Int)
   fun im_vector_resize = ImVector_resize(self : ImVector*, new_size : LibC::Int)
   fun im_vector_resize_t = ImVector_resizeT(self : ImVector*, new_size : LibC::Int, v : Void*)
+  fun im_vector_shrink = ImVector_shrink(self : ImVector*, new_size : LibC::Int)
   fun im_vector_size = ImVector_size(self : ImVector*) : LibC::Int
   fun im_vector_size_in_bytes = ImVector_size_in_bytes(self : ImVector*) : LibC::Int
   fun im_vector_swap = ImVector_swap(self : ImVector*, rhs : ImVector)
-  fun pair_pair_int = Pair_PairInt(_key : LibC::UInt, _val_i : LibC::Int) : Pair*
-  fun pair_pair_float = Pair_PairFloat(_key : LibC::UInt, _val_f : LibC::Float) : Pair*
-  fun pair_pair_ptr = Pair_PairPtr(_key : LibC::UInt, _val_p : Void*) : Pair*
-  fun pair_destroy = Pair_destroy(self : Pair*)
-  fun text_range_text_range = TextRange_TextRange : TextRange*
-  fun text_range_text_range_str = TextRange_TextRangeStr(_b : LibC::Char*, _e : LibC::Char*) : TextRange*
-  fun text_range_begin = TextRange_begin(self : TextRange*) : LibC::Char*
-  fun text_range_destroy = TextRange_destroy(self : TextRange*)
-  fun text_range_empty = TextRange_empty(self : TextRange*) : Bool
-  fun text_range_end = TextRange_end(self : TextRange*) : LibC::Char*
-  fun text_range_split = TextRange_split(self : TextRange*, separator : LibC::Char, out : ImVector*)
   fun ig_accept_drag_drop_payload = igAcceptDragDropPayload(type : LibC::Char*, flags : ImGuiDragDropFlags) : ImGuiPayload*
   fun ig_align_text_to_frame_padding = igAlignTextToFramePadding
   fun ig_arrow_button = igArrowButton(str_id : LibC::Char*, dir : ImGuiDir) : Bool
@@ -1434,9 +1032,9 @@ lib LibImGui
   fun ig_begin_menu = igBeginMenu(label : LibC::Char*, enabled : Bool) : Bool
   fun ig_begin_menu_bar = igBeginMenuBar : Bool
   fun ig_begin_popup = igBeginPopup(str_id : LibC::Char*, flags : ImGuiWindowFlags) : Bool
-  fun ig_begin_popup_context_item = igBeginPopupContextItem(str_id : LibC::Char*, mouse_button : LibC::Int) : Bool
-  fun ig_begin_popup_context_void = igBeginPopupContextVoid(str_id : LibC::Char*, mouse_button : LibC::Int) : Bool
-  fun ig_begin_popup_context_window = igBeginPopupContextWindow(str_id : LibC::Char*, mouse_button : LibC::Int, also_over_items : Bool) : Bool
+  fun ig_begin_popup_context_item = igBeginPopupContextItem(str_id : LibC::Char*, mouse_button : ImGuiMouseButton) : Bool
+  fun ig_begin_popup_context_void = igBeginPopupContextVoid(str_id : LibC::Char*, mouse_button : ImGuiMouseButton) : Bool
+  fun ig_begin_popup_context_window = igBeginPopupContextWindow(str_id : LibC::Char*, mouse_button : ImGuiMouseButton, also_over_items : Bool) : Bool
   fun ig_begin_popup_modal = igBeginPopupModal(name : LibC::Char*, p_open : Bool*, flags : ImGuiWindowFlags) : Bool
   fun ig_begin_tab_bar = igBeginTabBar(str_id : LibC::Char*, flags : ImGuiTabBarFlags) : Bool
   fun ig_begin_tab_item = igBeginTabItem(label : LibC::Char*, p_open : Bool*, flags : ImGuiTabItemFlags) : Bool
@@ -1479,8 +1077,8 @@ lib LibImGui
   fun ig_drag_int3 = igDragInt3(label : LibC::Char*, v : LibC::Int[3], v_speed : LibC::Float, v_min : LibC::Int, v_max : LibC::Int, format : LibC::Char*) : Bool
   fun ig_drag_int4 = igDragInt4(label : LibC::Char*, v : LibC::Int[4], v_speed : LibC::Float, v_min : LibC::Int, v_max : LibC::Int, format : LibC::Char*) : Bool
   fun ig_drag_int_range2 = igDragIntRange2(label : LibC::Char*, v_current_min : LibC::Int*, v_current_max : LibC::Int*, v_speed : LibC::Float, v_min : LibC::Int, v_max : LibC::Int, format : LibC::Char*, format_max : LibC::Char*) : Bool
-  fun ig_drag_scalar = igDragScalar(label : LibC::Char*, data_type : ImGuiDataType, v : Void*, v_speed : LibC::Float, v_min : Void*, v_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
-  fun ig_drag_scalar_n = igDragScalarN(label : LibC::Char*, data_type : ImGuiDataType, v : Void*, components : LibC::Int, v_speed : LibC::Float, v_min : Void*, v_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
+  fun ig_drag_scalar = igDragScalar(label : LibC::Char*, data_type : ImGuiDataType, p_data : Void*, v_speed : LibC::Float, p_min : Void*, p_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
+  fun ig_drag_scalar_n = igDragScalarN(label : LibC::Char*, data_type : ImGuiDataType, p_data : Void*, components : LibC::Int, v_speed : LibC::Float, p_min : Void*, p_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
   fun ig_dummy = igDummy(size : ImVec2)
   fun ig_end = igEnd
   fun ig_end_child = igEndChild
@@ -1534,7 +1132,7 @@ lib LibImGui
   fun ig_get_key_index = igGetKeyIndex(imgui_key : ImGuiKey) : LibC::Int
   fun ig_get_key_pressed_amount = igGetKeyPressedAmount(key_index : LibC::Int, repeat_delay : LibC::Float, rate : LibC::Float) : LibC::Int
   fun ig_get_mouse_cursor = igGetMouseCursor : ImGuiMouseCursor
-  fun ig_get_mouse_drag_delta_non_udt2 = igGetMouseDragDelta_nonUDT2(button : LibC::Int, lock_threshold : LibC::Float) : ImVec2
+  fun ig_get_mouse_drag_delta_non_udt2 = igGetMouseDragDelta_nonUDT2(button : ImGuiMouseButton, lock_threshold : LibC::Float) : ImVec2
   fun ig_get_mouse_pos_non_udt2 = igGetMousePos_nonUDT2 : ImVec2
   fun ig_get_mouse_pos_on_opening_current_popup_non_udt2 = igGetMousePosOnOpeningCurrentPopup_nonUDT2 : ImVec2
   fun ig_get_scroll_max_x = igGetScrollMaxX : LibC::Float
@@ -1570,8 +1168,8 @@ lib LibImGui
   fun ig_input_int2 = igInputInt2(label : LibC::Char*, v : LibC::Int[2], flags : ImGuiInputTextFlags) : Bool
   fun ig_input_int3 = igInputInt3(label : LibC::Char*, v : LibC::Int[3], flags : ImGuiInputTextFlags) : Bool
   fun ig_input_int4 = igInputInt4(label : LibC::Char*, v : LibC::Int[4], flags : ImGuiInputTextFlags) : Bool
-  fun ig_input_scalar = igInputScalar(label : LibC::Char*, data_type : ImGuiDataType, v : Void*, step : Void*, step_fast : Void*, format : LibC::Char*, flags : ImGuiInputTextFlags) : Bool
-  fun ig_input_scalar_n = igInputScalarN(label : LibC::Char*, data_type : ImGuiDataType, v : Void*, components : LibC::Int, step : Void*, step_fast : Void*, format : LibC::Char*, flags : ImGuiInputTextFlags) : Bool
+  fun ig_input_scalar = igInputScalar(label : LibC::Char*, data_type : ImGuiDataType, p_data : Void*, p_step : Void*, p_step_fast : Void*, format : LibC::Char*, flags : ImGuiInputTextFlags) : Bool
+  fun ig_input_scalar_n = igInputScalarN(label : LibC::Char*, data_type : ImGuiDataType, p_data : Void*, components : LibC::Int, p_step : Void*, p_step_fast : Void*, format : LibC::Char*, flags : ImGuiInputTextFlags) : Bool
   fun ig_input_text = igInputText(label : LibC::Char*, buf : LibC::Char*, buf_size : LibC::SizeT, flags : ImGuiInputTextFlags, callback : Void*, user_data : Void*) : Bool
   fun ig_input_text_multiline = igInputTextMultiline(label : LibC::Char*, buf : LibC::Char*, buf_size : LibC::SizeT, size : ImVec2, flags : ImGuiInputTextFlags, callback : Void*, user_data : Void*) : Bool
   fun ig_input_text_with_hint = igInputTextWithHint(label : LibC::Char*, hint : LibC::Char*, buf : LibC::Char*, buf_size : LibC::SizeT, flags : ImGuiInputTextFlags, callback : Void*, user_data : Void*) : Bool
@@ -1582,23 +1180,24 @@ lib LibImGui
   fun ig_is_any_mouse_down = igIsAnyMouseDown : Bool
   fun ig_is_item_activated = igIsItemActivated : Bool
   fun ig_is_item_active = igIsItemActive : Bool
-  fun ig_is_item_clicked = igIsItemClicked(mouse_button : LibC::Int) : Bool
+  fun ig_is_item_clicked = igIsItemClicked(mouse_button : ImGuiMouseButton) : Bool
   fun ig_is_item_deactivated = igIsItemDeactivated : Bool
   fun ig_is_item_deactivated_after_edit = igIsItemDeactivatedAfterEdit : Bool
   fun ig_is_item_edited = igIsItemEdited : Bool
   fun ig_is_item_focused = igIsItemFocused : Bool
   fun ig_is_item_hovered = igIsItemHovered(flags : ImGuiHoveredFlags) : Bool
+  fun ig_is_item_toggled_open = igIsItemToggledOpen : Bool
   fun ig_is_item_visible = igIsItemVisible : Bool
   fun ig_is_key_down = igIsKeyDown(user_key_index : LibC::Int) : Bool
   fun ig_is_key_pressed = igIsKeyPressed(user_key_index : LibC::Int, repeat : Bool) : Bool
   fun ig_is_key_released = igIsKeyReleased(user_key_index : LibC::Int) : Bool
-  fun ig_is_mouse_clicked = igIsMouseClicked(button : LibC::Int, repeat : Bool) : Bool
-  fun ig_is_mouse_double_clicked = igIsMouseDoubleClicked(button : LibC::Int) : Bool
-  fun ig_is_mouse_down = igIsMouseDown(button : LibC::Int) : Bool
-  fun ig_is_mouse_dragging = igIsMouseDragging(button : LibC::Int, lock_threshold : LibC::Float) : Bool
+  fun ig_is_mouse_clicked = igIsMouseClicked(button : ImGuiMouseButton, repeat : Bool) : Bool
+  fun ig_is_mouse_double_clicked = igIsMouseDoubleClicked(button : ImGuiMouseButton) : Bool
+  fun ig_is_mouse_down = igIsMouseDown(button : ImGuiMouseButton) : Bool
+  fun ig_is_mouse_dragging = igIsMouseDragging(button : ImGuiMouseButton, lock_threshold : LibC::Float) : Bool
   fun ig_is_mouse_hovering_rect = igIsMouseHoveringRect(r_min : ImVec2, r_max : ImVec2, clip : Bool) : Bool
   fun ig_is_mouse_pos_valid = igIsMousePosValid(mouse_pos : ImVec2*) : Bool
-  fun ig_is_mouse_released = igIsMouseReleased(button : LibC::Int) : Bool
+  fun ig_is_mouse_released = igIsMouseReleased(button : ImGuiMouseButton) : Bool
   fun ig_is_popup_open = igIsPopupOpen(str_id : LibC::Char*) : Bool
   fun ig_is_rect_visible = igIsRectVisible(size : ImVec2) : Bool
   fun ig_is_rect_visible_vec2 = igIsRectVisibleVec2(rect_min : ImVec2, rect_max : ImVec2) : Bool
@@ -1627,7 +1226,7 @@ lib LibImGui
   fun ig_new_line = igNewLine
   fun ig_next_column = igNextColumn
   fun ig_open_popup = igOpenPopup(str_id : LibC::Char*)
-  fun ig_open_popup_on_item_click = igOpenPopupOnItemClick(str_id : LibC::Char*, mouse_button : LibC::Int) : Bool
+  fun ig_open_popup_on_item_click = igOpenPopupOnItemClick(str_id : LibC::Char*, mouse_button : ImGuiMouseButton) : Bool
   fun ig_plot_histogram_float_ptr = igPlotHistogramFloatPtr(label : LibC::Char*, values : LibC::Float*, values_count : LibC::Int, values_offset : LibC::Int, overlay_text : LibC::Char*, scale_min : LibC::Float, scale_max : LibC::Float, graph_size : ImVec2, stride : LibC::Int)
   fun ig_plot_lines = igPlotLines(label : LibC::Char*, values : LibC::Float*, values_count : LibC::Int, values_offset : LibC::Int, overlay_text : LibC::Char*, scale_min : LibC::Float, scale_max : LibC::Float, graph_size : ImVec2, stride : LibC::Int)
   fun ig_pop_allow_keyboard_focus = igPopAllowKeyboardFocus
@@ -1657,7 +1256,7 @@ lib LibImGui
   fun ig_radio_button_bool = igRadioButtonBool(label : LibC::Char*, active : Bool) : Bool
   fun ig_radio_button_int_ptr = igRadioButtonIntPtr(label : LibC::Char*, v : LibC::Int*, v_button : LibC::Int) : Bool
   fun ig_render = igRender
-  fun ig_reset_mouse_drag_delta = igResetMouseDragDelta(button : LibC::Int)
+  fun ig_reset_mouse_drag_delta = igResetMouseDragDelta(button : ImGuiMouseButton)
   fun ig_same_line = igSameLine(offset_from_start_x : LibC::Float, spacing : LibC::Float)
   fun ig_save_ini_settings_to_disk = igSaveIniSettingsToDisk(ini_filename : LibC::Char*)
   fun ig_save_ini_settings_to_memory = igSaveIniSettingsToMemory(out_ini_size : LibC::SizeT*) : LibC::Char*
@@ -1677,7 +1276,7 @@ lib LibImGui
   fun ig_set_item_allow_overlap = igSetItemAllowOverlap
   fun ig_set_item_default_focus = igSetItemDefaultFocus
   fun ig_set_keyboard_focus_here = igSetKeyboardFocusHere(offset : LibC::Int)
-  fun ig_set_mouse_cursor = igSetMouseCursor(type : ImGuiMouseCursor)
+  fun ig_set_mouse_cursor = igSetMouseCursor(cursor_type : ImGuiMouseCursor)
   fun ig_set_next_item_open = igSetNextItemOpen(is_open : Bool, cond : ImGuiCond)
   fun ig_set_next_item_width = igSetNextItemWidth(item_width : LibC::Float)
   fun ig_set_next_window_bg_alpha = igSetNextWindowBgAlpha(alpha : LibC::Float)
@@ -1687,7 +1286,9 @@ lib LibImGui
   fun ig_set_next_window_pos = igSetNextWindowPos(pos : ImVec2, cond : ImGuiCond, pivot : ImVec2)
   fun ig_set_next_window_size = igSetNextWindowSize(size : ImVec2, cond : ImGuiCond)
   fun ig_set_next_window_size_constraints = igSetNextWindowSizeConstraints(size_min : ImVec2, size_max : ImVec2, custom_callback : Void*, custom_callback_data : Void*)
+  fun ig_set_scroll_from_pos_x = igSetScrollFromPosX(local_x : LibC::Float, center_x_ratio : LibC::Float)
   fun ig_set_scroll_from_pos_y = igSetScrollFromPosY(local_y : LibC::Float, center_y_ratio : LibC::Float)
+  fun ig_set_scroll_here_x = igSetScrollHereX(center_x_ratio : LibC::Float)
   fun ig_set_scroll_here_y = igSetScrollHereY(center_y_ratio : LibC::Float)
   fun ig_set_scroll_x = igSetScrollX(scroll_x : LibC::Float)
   fun ig_set_scroll_y = igSetScrollY(scroll_y : LibC::Float)
@@ -1719,8 +1320,8 @@ lib LibImGui
   fun ig_slider_int2 = igSliderInt2(label : LibC::Char*, v : LibC::Int[2], v_min : LibC::Int, v_max : LibC::Int, format : LibC::Char*) : Bool
   fun ig_slider_int3 = igSliderInt3(label : LibC::Char*, v : LibC::Int[3], v_min : LibC::Int, v_max : LibC::Int, format : LibC::Char*) : Bool
   fun ig_slider_int4 = igSliderInt4(label : LibC::Char*, v : LibC::Int[4], v_min : LibC::Int, v_max : LibC::Int, format : LibC::Char*) : Bool
-  fun ig_slider_scalar = igSliderScalar(label : LibC::Char*, data_type : ImGuiDataType, v : Void*, v_min : Void*, v_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
-  fun ig_slider_scalar_n = igSliderScalarN(label : LibC::Char*, data_type : ImGuiDataType, v : Void*, components : LibC::Int, v_min : Void*, v_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
+  fun ig_slider_scalar = igSliderScalar(label : LibC::Char*, data_type : ImGuiDataType, p_data : Void*, p_min : Void*, p_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
+  fun ig_slider_scalar_n = igSliderScalarN(label : LibC::Char*, data_type : ImGuiDataType, p_data : Void*, components : LibC::Int, p_min : Void*, p_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
   fun ig_small_button = igSmallButton(label : LibC::Char*) : Bool
   fun ig_spacing = igSpacing
   fun ig_style_colors_classic = igStyleColorsClassic(dst : ImGuiStyle*)
@@ -1731,7 +1332,6 @@ lib LibImGui
   fun ig_text_disabled = igTextDisabled(fmt : LibC::Char*)
   fun ig_text_unformatted = igTextUnformatted(text : LibC::Char*, text_end : LibC::Char*)
   fun ig_text_wrapped = igTextWrapped(fmt : LibC::Char*)
-  fun ig_tree_advance_to_label_pos = igTreeAdvanceToLabelPos
   fun ig_tree_node_str = igTreeNodeStr(label : LibC::Char*) : Bool
   fun ig_tree_node_str_str = igTreeNodeStrStr(str_id : LibC::Char*, fmt : LibC::Char*) : Bool
   fun ig_tree_node_ptr = igTreeNodePtr(ptr_id : Void*, fmt : LibC::Char*) : Bool
@@ -1744,7 +1344,7 @@ lib LibImGui
   fun ig_unindent = igUnindent(indent_w : LibC::Float)
   fun ig_v_slider_float = igVSliderFloat(label : LibC::Char*, size : ImVec2, v : LibC::Float*, v_min : LibC::Float, v_max : LibC::Float, format : LibC::Char*, power : LibC::Float) : Bool
   fun ig_v_slider_int = igVSliderInt(label : LibC::Char*, size : ImVec2, v : LibC::Int*, v_min : LibC::Int, v_max : LibC::Int, format : LibC::Char*) : Bool
-  fun ig_v_slider_scalar = igVSliderScalar(label : LibC::Char*, size : ImVec2, data_type : ImGuiDataType, v : Void*, v_min : Void*, v_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
+  fun ig_v_slider_scalar = igVSliderScalar(label : LibC::Char*, size : ImVec2, data_type : ImGuiDataType, p_data : Void*, p_min : Void*, p_max : Void*, format : LibC::Char*, power : LibC::Float) : Bool
   fun ig_value_bool = igValueBool(prefix : LibC::Char*, b : Bool)
   fun ig_value_int = igValueInt(prefix : LibC::Char*, v : LibC::Int)
   fun ig_value_uint = igValueUint(prefix : LibC::Char*, v : LibC::UInt)
